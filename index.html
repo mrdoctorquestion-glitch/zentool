@@ -75,32 +75,39 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-sky-700 to-cyan-600 dark:from-sky-400 dark:to-cyan-300 bg-clip-text text-transparent">ZenTool</span>
-            <span class="text-[11px] uppercase font-black px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+            <span class="text-[11px] uppercase font-black px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800" data-i18n="header.security">
               <i class="ri-shield-keyhole-line mr-1"></i> 100% Riêng Tư Tại Máy Bạn
             </span>
           </div>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block" data-i18n="header.slogan">Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server</p>
         </div>
       </div>
 
       <!-- Navigation Tabs (Desktop) -->
       <nav class="hidden md:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
         <button id="nav-invoice" onclick="switchTab('invoice')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-white dark:bg-slate-700 shadow-sm text-sky-600 dark:text-sky-300">
-          <i class="ri-file-text-line"></i> Đọc & Gom Hóa Đơn XML
+          <i class="ri-file-text-line"></i> <span data-i18n="nav.invoice">Đọc & Gom Hóa Đơn XML</span>
         </button>
         <button id="nav-files" onclick="switchTab('files')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900">
-          <i class="ri-folder-zip-line"></i> Ghép File & Tiện Ích Văn Phòng
+          <i class="ri-folder-zip-line"></i> <span data-i18n="nav.files">Ghép File & Tiện Ích Văn Phòng</span>
         </button>
         <button id="nav-profit" onclick="switchTab('profit')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900">
-          <i class="ri-calculator-line"></i> Lợi Nhuận Sàn & Thuế 2026
+          <i class="ri-calculator-line"></i> <span data-i18n="nav.profit">Lợi Nhuận Sàn & Thuế 2026</span>
         </button>
         <button id="nav-media" onclick="switchTab('media')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900">
-          <i class="ri-image-edit-line"></i> Đổi Ảnh HEIC & Nén Ảnh
+          <i class="ri-image-edit-line"></i> <span data-i18n="nav.media">Đổi Ảnh HEIC & Nén Ảnh</span>
         </button>
       </nav>
 
       <!-- Action Utilities -->
       <div class="flex items-center gap-2">
+        <!-- Language Selector (VI / EN / DE) -->
+        <select id="lang-select" onchange="setLanguage(this.value)" class="text-xs font-bold px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-sm" title="Chọn ngôn ngữ / Select Language / Sprache wählen">
+          <option value="vi">🇻🇳 VI</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="de">🇩🇪 DE</option>
+        </select>
+
         <button onclick="shareApp()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
           <i class="ri-share-forward-line"></i> <span class="hidden sm:inline">Chia sẻ</span>
         </button>
@@ -114,10 +121,10 @@
 
     <!-- Mobile Nav Bar -->
     <div class="md:hidden flex items-center justify-around border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 py-2 overflow-x-auto text-xs">
-      <button onclick="switchTab('invoice')" class="px-2 py-1 font-bold text-sky-600">Hóa Đơn XML</button>
-      <button onclick="switchTab('files')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Ghép File & Tiện Ích</button>
-      <button onclick="switchTab('profit')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Lãi Sàn & Thuế</button>
-      <button onclick="switchTab('media')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Đổi Ảnh HEIC</button>
+      <button onclick="switchTab('invoice')" class="px-2 py-1 font-bold text-sky-600" data-i18n="nav.invoiceShort">Hóa Đơn XML</button>
+      <button onclick="switchTab('files')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300" data-i18n="nav.filesShort">Ghép File & Tiện Ích</button>
+      <button onclick="switchTab('profit')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300" data-i18n="nav.profitShort">Lãi Sàn & Thuế</button>
+      <button onclick="switchTab('media')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300" data-i18n="nav.mediaShort">Studio Ảnh</button>
     </div>
   </header>
 
@@ -428,16 +435,16 @@
 
       <!-- Segmented Category Filters -->
       <div class="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
-        <button id="filter-tool-all" onclick="filterPdfTools('all')" class="px-3 py-1.5 rounded-lg font-bold transition bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 shadow-sm">
-          Tất Cả (11 Công Cụ)
+        <button id="filter-tool-all" onclick="filterPdfTools('all')" class="px-3 py-1.5 rounded-lg font-bold transition bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 shadow-sm" data-i18n="filter.all">
+          Tất Cả (12 Công Cụ)
         </button>
-        <button id="filter-tool-pages" onclick="filterPdfTools('pages')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+        <button id="filter-tool-pages" onclick="filterPdfTools('pages')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-i18n="filter.pages">
           📑 Ghép & Xử Lý Trang (4)
         </button>
-        <button id="filter-tool-convert" onclick="filterPdfTools('convert')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
-          🔄 Chuyển Đổi & Nén (3)
+        <button id="filter-tool-convert" onclick="filterPdfTools('convert')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-i18n="filter.convert">
+          🔄 Chuyển Đổi & Nén (4)
         </button>
-        <button id="filter-tool-security" onclick="filterPdfTools('security')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+        <button id="filter-tool-security" onclick="filterPdfTools('security')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-i18n="filter.security">
           🔒 Ký Tên & Bảo Mật (4)
         </button>
       </div>
@@ -862,6 +869,48 @@
           </div>
         </div>
 
+        <!-- Tool 12: Bóc Tách Bảng Biểu PDF Sang Excel (.xlsx) (Phase 3) -->
+        <div class="tool-card tool-cat-convert bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+              <i class="ri-table-line text-lg"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200" data-i18n="tool12.title">Bóc Tách Bảng PDF Sang Excel</h3>
+              <p class="text-[11px] text-slate-400" data-i18n="tool12.desc">Tự động nhận diện dòng/cột & xuất file .xlsx sạch sẽ</p>
+            </div>
+          </div>
+
+          <div onclick="document.getElementById('pdf-table-file-input').click()" class="border-2 border-dashed border-emerald-300 dark:border-emerald-800 hover:border-emerald-500 rounded-xl p-4 text-center cursor-pointer transition bg-emerald-50/20 dark:bg-emerald-950/20">
+            <i class="ri-file-excel-2-line text-3xl text-emerald-600 mb-1 block"></i>
+            <p class="text-xs font-bold text-slate-800 dark:text-slate-200" data-i18n="tool12.prompt">Chọn PDF chứa bảng biểu (Sao kê, Báo cáo)</p>
+            <p class="text-[10px] text-slate-400 mt-0.5" id="pdf-table-file-name" data-i18n="tool12.hint">100% trong RAM trình duyệt, không tải lên server</p>
+            <input type="file" id="pdf-table-file-input" accept=".pdf" class="hidden" onchange="handlePdfTableUpload(event)">
+          </div>
+
+          <div class="flex gap-2">
+            <button id="btn-export-pdf-table" onclick="executePdfTableToExcel()" disabled class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-file-excel-line"></i> <span data-i18n="tool12.btnExport">Xuất Excel (.xlsx)</span>
+            </button>
+            <button onclick="loadSamplePdfTableTest()" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 transition" title="Thử nghiệm bảng số liệu mẫu 1-click">
+              <i class="ri-magic-line"></i> <span data-i18n="tool12.btnSample">Mẫu</span>
+            </button>
+            <button onclick="clearPdfTableExtractor()" class="px-2.5 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition" title="Xóa trắng bảng">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+
+          <!-- Khu vực xem trước bảng biểu -->
+          <div id="pdf-table-preview-container" class="hidden space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span id="pdf-table-preview-meta" class="font-medium text-emerald-600 dark:text-emerald-400">0 dòng • 0 cột</span>
+              <span class="text-[10px] text-slate-400 italic" data-i18n="tool12.preview">Xem trước số liệu</span>
+            </div>
+            <div id="pdf-table-preview-box" class="max-h-36 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] bg-slate-50 dark:bg-slate-800">
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- BẢNG NHẬT KÝ PHIÊN LÀM VIỆC & BẢO MẬT RAM -->
@@ -1105,12 +1154,15 @@
         </div>
 
         <!-- Segmented Tab Switcher -->
-        <div class="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs self-start sm:self-auto">
+        <div class="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs self-start sm:self-auto">
           <button id="media-subtab-heic" onclick="switchMediaSubTab('heic')" class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm">
-            <i class="ri-apple-line text-sm"></i> <span>Đổi Ảnh HEIC (iPhone)</span>
+            <i class="ri-apple-line text-sm"></i> <span data-i18n="media.subtab.heic">Đổi Ảnh HEIC (iPhone)</span>
           </button>
           <button id="media-subtab-compress" onclick="switchMediaSubTab('compress')" class="px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900">
-            <i class="ri-speed-line text-sm"></i> <span>Nén Ảnh WebP</span>
+            <i class="ri-speed-line text-sm"></i> <span data-i18n="media.subtab.compress">Nén Ảnh WebP</span>
+          </button>
+          <button id="media-subtab-bgremove" onclick="switchMediaSubTab('bgremove')" class="px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900">
+            <i class="ri-magic-line text-sm"></i> <span data-i18n="media.subtab.bgremove">Tách Nền Ảnh (PNG Trong Suốt)</span>
           </button>
         </div>
       </div>
@@ -1331,6 +1383,116 @@
                 <i class="ri-arrow-right-line"></i>
                 <span id="compressed-size-label" class="font-bold text-purple-600 dark:text-purple-400">Chờ nén...</span>
               </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 3: TÁCH NỀN ẢNH 1 CHẠM & XUẤT PNG TRONG SUỐT (PHASE 3)   -->
+      <!-- ============================================================ -->
+      <div id="media-bgremove-view" class="space-y-6 hidden">
+        
+        <!-- BANNER GIẢI PHÁP 0 ĐỒNG & CHỐNG PAYWALL -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-sky-950/30 border border-emerald-200 dark:border-emerald-800 shadow-sm">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-emerald-600/30">
+              <i class="ri-magic-line"></i>
+            </div>
+            <div>
+              <h4 class="text-xs sm:text-sm font-extrabold text-emerald-950 dark:text-emerald-200 uppercase tracking-wide" data-i18n="bgremove.bannerTitle">
+                TÁCH NỀN ẢNH 1 CHẠM 100% TRONG RAM — KHÔNG WATERMARK, KHÔNG GIỚI HẠN
+              </h4>
+              <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed" data-i18n="bgremove.bannerDesc">
+                Giải pháp thay thế hoàn hảo cho Remove.bg và Canva Pro: Tách phông nền trắng/màu đơn sắc của ảnh sản phẩm, ảnh chụp chân dung và xuất thẳng file <strong>PNG trong suốt Full HD</strong>. Xử lý 100% tại trình duyệt máy tính của bạn, không upload ảnh lên mạng, không yêu cầu đăng ký hay thẻ tín dụng.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Background Remover Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Control Panel (Trái) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              
+              <!-- Upload Box -->
+              <div onclick="document.getElementById('bgremove-file-input').click()" class="border-2 border-dashed border-emerald-300 dark:border-emerald-800 hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer transition bg-emerald-50/20 dark:bg-emerald-950/20">
+                <i class="ri-image-add-line text-4xl text-emerald-600 mb-2 block"></i>
+                <p class="text-xs font-bold text-slate-800 dark:text-slate-200" data-i18n="bgremove.uploadPrompt">Chọn hoặc kéo thả ảnh cần tách nền vào đây</p>
+                <p class="text-[11px] text-slate-400 mt-1" data-i18n="bgremove.uploadHint">Hỗ trợ JPG, PNG, WebP (Ảnh sản phẩm, logo, chân dung)</p>
+                <input type="file" id="bgremove-file-input" accept="image/*" class="hidden" onchange="handleBgRemoveUpload(event)">
+              </div>
+
+              <!-- Thanh trượt Ngưỡng Nhạy Màu (Tolerance) -->
+              <div>
+                <div class="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <span data-i18n="bgremove.toleranceLabel">Độ nhạy xóa màu (Tolerance):</span>
+                  <span id="bgremove-tolerance-val" class="font-mono text-emerald-600 font-bold">35%</span>
+                </div>
+                <input type="range" id="bgremove-tolerance" min="10" max="90" value="35" oninput="setBgRemoveTolerance(this.value)" class="w-full accent-emerald-600">
+                <p class="text-[10px] text-slate-400 mt-0.5" data-i18n="bgremove.toleranceHint">Kéo tăng nếu còn sót viền nền; kéo giảm nếu bị ăn lẹm vào chi tiết sản phẩm.</p>
+              </div>
+
+              <!-- Thanh trượt Làm Mịn Viền (Feathering) -->
+              <div>
+                <div class="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <span data-i18n="bgremove.featherLabel">Làm mịn & Khử răng cưa (Feathering):</span>
+                  <span id="bgremove-feather-val" class="font-mono text-emerald-600 font-bold">12%</span>
+                </div>
+                <input type="range" id="bgremove-feather" min="0" max="30" value="12" oninput="setBgRemoveFeather(this.value)" class="w-full accent-emerald-600">
+              </div>
+
+              <!-- Chấm chọn màu nền (Eyedropper) -->
+              <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                <div class="flex items-center gap-2">
+                  <span id="bgremove-color-swatch" class="w-6 h-6 rounded-lg border border-slate-300 dark:border-slate-600 shadow-inner" style="background: rgb(255,255,255);" title="Màu nền đang nhận diện"></span>
+                  <span class="font-semibold text-slate-700 dark:text-slate-300" data-i18n="bgremove.colorLabel">Màu nền nhận diện</span>
+                </div>
+                <button id="bgremove-eyedropper-btn" onclick="toggleEyedropper()" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-sm">
+                  <i class="ri-sip-line text-sm"></i> <span data-i18n="bgremove.eyedropperBtn">Chấm màu trên ảnh</span>
+                </button>
+              </div>
+
+              <!-- Nút tải & Thử nghiệm -->
+              <div class="space-y-2">
+                <button id="btn-download-bgremove" onclick="downloadBgRemovedPng()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+                  <i class="ri-download-cloud-line text-base"></i> <span data-i18n="bgremove.btnDownload">Tải PNG Trong Suốt (Full HD)</span>
+                </button>
+                <div class="flex gap-2">
+                  <button onclick="loadSampleBgRemoveTest()" class="flex-1 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 transition flex items-center justify-center gap-1.5">
+                    <i class="ri-magic-line text-sm"></i> <span data-i18n="bgremove.btnSample">Thử Ảnh Mẫu (1-Click)</span>
+                  </button>
+                  <button onclick="clearBgRemove()" class="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition" title="Xóa làm lại">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Preview Canvas Panel (Phải) -->
+          <div class="lg:col-span-7 flex flex-col items-center justify-center">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm w-full text-center space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <span class="font-bold flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                  <i class="ri-eye-line text-emerald-600"></i> <span data-i18n="bgremove.previewTitle">Kết Quả Trong Suốt Thời Gian Thực</span>
+                </span>
+                <span id="bgremove-meta-label" class="text-[11px] text-slate-400">Chưa có ảnh</span>
+              </div>
+
+              <!-- Vùng hiển thị ảnh có phông caro trong suốt -->
+              <div class="bg-checkered rounded-xl p-3 border border-slate-200 dark:border-slate-700 flex items-center justify-center min-h-[300px] max-h-[500px] overflow-auto">
+                <canvas id="bgremove-canvas" class="max-w-full max-h-[460px] object-contain rounded-lg shadow-sm"></canvas>
+              </div>
+
+              <p class="text-[11px] text-slate-400 italic" data-i18n="bgremove.canvasHint">
+                💡 Nền caro biểu thị vùng trong suốt. Khi chèn lên web hoặc sàn Shopee/TikTok, nền sẽ tự động hòa vào ảnh nền đích.
+              </p>
             </div>
           </div>
 

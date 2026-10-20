@@ -133,6 +133,7 @@ const INLINE_SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 document.addEventListener('DOMContentLoaded', () => {
   initZenGuardSecurity();
   initTheme();
+  initLanguage();
   initCategorySelect();
   calculateDetailedProfit();
   initCompressSample();
@@ -2367,28 +2368,21 @@ function generateDetailedAiAdvice(netProfit, netMargin, price, totalFees, ads, r
 function switchMediaSubTab(subTab) {
   const heicView = document.getElementById('media-heic-view');
   const compressView = document.getElementById('media-compress-view');
+  const bgremoveView = document.getElementById('media-bgremove-view');
   const btnHeic = document.getElementById('media-subtab-heic');
   const btnCompress = document.getElementById('media-subtab-compress');
+  const btnBgremove = document.getElementById('media-subtab-bgremove');
 
-  if (subTab === 'heic') {
-    if (heicView) heicView.classList.remove('hidden');
-    if (compressView) compressView.classList.add('hidden');
-    if (btnHeic) {
-      btnHeic.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm";
-    }
-    if (btnCompress) {
-      btnCompress.className = "px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900";
-    }
-  } else {
-    if (heicView) heicView.classList.add('hidden');
-    if (compressView) compressView.classList.remove('hidden');
-    if (btnCompress) {
-      btnCompress.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm";
-    }
-    if (btnHeic) {
-      btnHeic.className = "px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900";
-    }
-  }
+  const activeClass = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm";
+  const inactiveClass = "px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900";
+
+  if (heicView) heicView.classList.toggle('hidden', subTab !== 'heic');
+  if (compressView) compressView.classList.toggle('hidden', subTab !== 'compress');
+  if (bgremoveView) bgremoveView.classList.toggle('hidden', subTab !== 'bgremove');
+
+  if (btnHeic) btnHeic.className = (subTab === 'heic') ? activeClass : inactiveClass;
+  if (btnCompress) btnCompress.className = (subTab === 'compress') ? activeClass : inactiveClass;
+  if (btnBgremove) btnBgremove.className = (subTab === 'bgremove') ? activeClass : inactiveClass;
 }
 
 // ------------------------------------------------------------
@@ -2850,4 +2844,798 @@ function downloadCompressedImage() {
     URL.revokeObjectURL(url);
     alert('🎉 Đã tải ảnh nén về máy tính của anh!');
   }, format, quality);
+}
+
+
+// ============================================================
+// PHÂN HỆ ĐA NGÔN NGỮ (i18n): VI / EN / DE (100% CLIENT-SIDE)
+// ============================================================
+
+const TRANSLATIONS = {
+  vi: {
+    // Header & Meta
+    'app.title': 'ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận 100% Client-Side',
+    'header.security': '100% Riêng Tư Tại Máy Bạn',
+    'header.slogan': 'Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server',
+    'btn.share': 'Chia sẻ',
+
+    // Main Navigation
+    'nav.invoice': 'Đọc & Gom Hóa Đơn XML',
+    'nav.files': 'Ghép File & Tiện Ích Văn Phòng',
+    'nav.profit': 'Lợi Nhuận Sàn & Thuế 2026',
+    'nav.media': 'Studio Ảnh & Đổi HEIC',
+    'nav.invoiceShort': 'Hóa Đơn XML',
+    'nav.filesShort': 'Ghép File & Tiện Ích',
+    'nav.profitShort': 'Lãi Sàn & Thuế',
+    'nav.mediaShort': 'Studio Ảnh',
+
+    // Tab 2 Filters
+    'filter.all': 'Tất Cả (12 Công Cụ)',
+    'filter.pages': '📑 Ghép & Xử Lý Trang (4)',
+    'filter.convert': '🔄 Chuyển Đổi & Nén (4)',
+    'filter.security': '🔒 Ký Tên & Bảo Mật (4)',
+
+    // Tool 12: PDF Table Extractor
+    'tool12.title': 'Bóc Tách Bảng PDF Sang Excel',
+    'tool12.desc': 'Tự động nhận diện dòng/cột & xuất file .xlsx sạch sẽ',
+    'tool12.prompt': 'Chọn PDF chứa bảng biểu (Sao kê, Báo cáo)',
+    'tool12.hint': '100% trong RAM trình duyệt, không tải lên server',
+    'tool12.btnExport': 'Xuất Excel (.xlsx)',
+    'tool12.btnSample': 'Mẫu',
+    'tool12.preview': 'Xem trước số liệu',
+
+    // Tab 4: Sub-tabs
+    'media.subtab.heic': 'Đổi Ảnh HEIC (iPhone)',
+    'media.subtab.compress': 'Nén Ảnh WebP',
+    'media.subtab.bgremove': 'Tách Nền Ảnh (PNG Trong Suốt)',
+
+    // Background Remover
+    'bgremove.bannerTitle': 'TÁCH NỀN ẢNH 1 CHẠM 100% TRONG RAM — KHÔNG WATERMARK, KHÔNG GIỚI HẠN',
+    'bgremove.bannerDesc': 'Giải pháp thay thế hoàn hảo cho Remove.bg và Canva Pro: Tách phông nền trắng/màu đơn sắc của ảnh sản phẩm, ảnh chụp chân dung và xuất thẳng file PNG trong suốt Full HD. Xử lý 100% tại trình duyệt máy tính của bạn, không upload ảnh lên mạng, không yêu cầu đăng ký hay thẻ tín dụng.',
+    'bgremove.uploadPrompt': 'Chọn hoặc kéo thả ảnh cần tách nền vào đây',
+    'bgremove.uploadHint': 'Hỗ trợ JPG, PNG, WebP (Ảnh sản phẩm, logo, chân dung)',
+    'bgremove.toleranceLabel': 'Độ nhạy xóa màu (Tolerance):',
+    'bgremove.toleranceHint': 'Kéo tăng nếu còn sót viền nền; kéo giảm nếu bị ăn lẹm vào chi tiết sản phẩm.',
+    'bgremove.featherLabel': 'Làm mịn & Khử răng cưa (Feathering):',
+    'bgremove.colorLabel': 'Màu nền nhận diện',
+    'bgremove.eyedropperBtn': 'Chấm màu trên ảnh',
+    'bgremove.btnDownload': 'Tải PNG Trong Suốt (Full HD)',
+    'bgremove.btnSample': 'Thử Ảnh Mẫu (1-Click)',
+    'bgremove.previewTitle': 'Kết Quả Trong Suốt Thời Gian Thực',
+    'bgremove.canvasHint': '💡 Nền caro biểu thị vùng trong suốt. Khi chèn lên web hoặc sàn Shopee/TikTok, nền sẽ tự động hòa vào ảnh nền đích.'
+  },
+
+  en: {
+    // Header & Meta
+    'app.title': 'ZenTool Suite — 100% Client-Side Privacy-First Productivity & Profit Suite',
+    'header.security': '100% In-Browser Privacy',
+    'header.slogan': '100% Free • Zero Cost • No Server Storage Or Tracking',
+    'btn.share': 'Share',
+
+    // Main Navigation
+    'nav.invoice': 'Parse & Merge XML Invoices',
+    'nav.files': 'Merge & Office PDF Suite',
+    'nav.profit': 'E-Commerce Profit & Taxes 2026',
+    'nav.media': 'Photo Studio & HEIC Converter',
+    'nav.invoiceShort': 'XML Invoices',
+    'nav.filesShort': 'Office PDF Suite',
+    'nav.profitShort': 'Profit & Tax',
+    'nav.mediaShort': 'Photo Studio',
+
+    // Tab 2 Filters
+    'filter.all': 'All (12 Tools)',
+    'filter.pages': '📑 Pages & Merge (4)',
+    'filter.convert': '🔄 Convert & Compress (4)',
+    'filter.security': '🔒 Sign & Protect (4)',
+
+    // Tool 12: PDF Table Extractor
+    'tool12.title': 'Extract PDF Table to Excel',
+    'tool12.desc': 'Auto-detect rows/columns and export clean .xlsx',
+    'tool12.prompt': 'Select PDF with tables (Bank statements, reports)',
+    'tool12.hint': '100% in local RAM, never uploaded to any server',
+    'tool12.btnExport': 'Export Excel (.xlsx)',
+    'tool12.btnSample': 'Sample',
+    'tool12.preview': 'Live Data Preview',
+
+    // Tab 4: Sub-tabs
+    'media.subtab.heic': 'Convert iPhone HEIC',
+    'media.subtab.compress': 'Compress to WebP',
+    'media.subtab.bgremove': '1-Touch Background Remover (PNG)',
+
+    // Background Remover
+    'bgremove.bannerTitle': '1-TOUCH BACKGROUND REMOVER IN RAM — NO WATERMARK, UNLIMITED',
+    'bgremove.bannerDesc': 'Free alternative to Remove.bg & Canva Pro: Remove white or solid backgrounds from product photos & portraits and export transparent Full HD PNGs directly in your browser. Zero server uploads, no login, no credit card required.',
+    'bgremove.uploadPrompt': 'Click or drop image here to remove background',
+    'bgremove.uploadHint': 'Supports JPG, PNG, WebP (Products, logos, portraits)',
+    'bgremove.toleranceLabel': 'Color Removal Sensitivity (Tolerance):',
+    'bgremove.toleranceHint': 'Increase if background borders remain; decrease if product edges are clipped.',
+    'bgremove.featherLabel': 'Edge Smoothing & Anti-Aliasing (Feathering):',
+    'bgremove.colorLabel': 'Detected Background Color',
+    'bgremove.eyedropperBtn': 'Pick Color From Canvas',
+    'bgremove.btnDownload': 'Download Transparent PNG (Full HD)',
+    'bgremove.btnSample': 'Sample Product (1-Click)',
+    'bgremove.previewTitle': 'Real-Time Transparent Preview',
+    'bgremove.canvasHint': '💡 The checkered background indicates transparency. When used on websites or marketplace listings, it blends seamlessly.'
+  },
+
+  de: {
+    // Header & Meta
+    'app.title': 'ZenTool Suite — 100% Client-Seitige Büro- & E-Commerce Suite',
+    'header.security': '100% Lokale Privatsphäre Im RAM',
+    'header.slogan': '100% Kostenlos • Keine Server-Speicherung • Kein Paywall',
+    'btn.share': 'Teilen',
+
+    // Main Navigation
+    'nav.invoice': 'XML-Rechnungen Einlesen',
+    'nav.files': 'PDF-Tools & Büro-Werkzeuge',
+    'nav.profit': 'Marktplatz-Gewinn & Steuern 2026',
+    'nav.media': 'Fotostudio & HEIC-Konverter',
+    'nav.invoiceShort': 'XML-Rechnungen',
+    'nav.filesShort': 'PDF-Tools',
+    'nav.profitShort': 'Gewinn & Steuern',
+    'nav.mediaShort': 'Fotostudio',
+
+    // Tab 2 Filters
+    'filter.all': 'Alle (12 Werkzeuge)',
+    'filter.pages': '📑 Seiten & Zusammenführen (4)',
+    'filter.convert': '🔄 Konvertieren & Komprimieren (4)',
+    'filter.security': '🔒 Signieren & Schützen (4)',
+
+    // Tool 12: PDF Table Extractor
+    'tool12.title': 'PDF-Tabellen Nach Excel Extrahieren',
+    'tool12.desc': 'Erkennt Zeilen/Spalten automatisch & exportiert saubere .xlsx',
+    'tool12.prompt': 'PDF mit Tabelle auswählen (Kontoauszug, Bericht)',
+    'tool12.hint': '100% im Browser-RAM verarbeitet, kein Server-Upload',
+    'tool12.btnExport': 'Nach Excel (.xlsx) Exportieren',
+    'tool12.btnSample': 'Muster',
+    'tool12.preview': 'Daten-Vorschau',
+
+    // Tab 4: Sub-tabs
+    'media.subtab.heic': 'iPhone HEIC Konvertieren',
+    'media.subtab.compress': 'WebP Komprimieren',
+    'media.subtab.bgremove': '1-Klick Hintergrund Entfernen (PNG)',
+
+    // Background Remover
+    'bgremove.bannerTitle': '1-KLICK HINTERGRUND ENTFERNER IM RAM — OHNE WASSERZEICHEN, UNBEGRENZT',
+    'bgremove.bannerDesc': 'Kostenlose Alternative zu Remove.bg & Canva Pro: Entfernen Sie weiße oder einfarbige Hintergründe von Produktfotos und Porträts und exportieren Sie transparente Full-HD-PNGs direkt im Browser. 100% lokal, keine Anmeldung, keine Kreditkarte nötig.',
+    'bgremove.uploadPrompt': 'Bild hier ablegen oder anklicken zum Entfernen',
+    'bgremove.uploadHint': 'Unterstützt JPG, PNG, WebP (Produkte, Logos, Porträts)',
+    'bgremove.toleranceLabel': 'Farbtoleranz (Tolerance):',
+    'bgremove.toleranceHint': 'Erhöhen, wenn Farbreste bleiben; verringern, wenn Produktdetails abgeschnitten werden.',
+    'bgremove.featherLabel': 'Kanten-Glättung (Feathering):',
+    'bgremove.colorLabel': 'Erkannte Hintergrundfarbe',
+    'bgremove.eyedropperBtn': 'Farbe Auf Bild Picken',
+    'bgremove.btnDownload': 'Transparentes PNG Herunterladen (Full HD)',
+    'bgremove.btnSample': 'Beispielprodukt (1-Klick)',
+    'bgremove.previewTitle': 'Echtzeit-Vorschau Mit Transparenz',
+    'bgremove.canvasHint': '💡 Das Karomuster stellt Transparenz dar. Beim Einfügen in Online-Shops passt sich das Produkt perfekt ein.'
+  }
+};
+
+let currentLanguage = 'vi';
+
+function initLanguage() {
+  let saved = 'vi';
+  try {
+    saved = localStorage.getItem('zentool_lang') || 'vi';
+  } catch (e) {
+    saved = 'vi';
+  }
+  if (!['vi', 'en', 'de'].includes(saved)) saved = 'vi';
+  setLanguage(saved);
+}
+
+function setLanguage(lang) {
+  if (!['vi', 'en', 'de'].includes(lang)) lang = 'vi';
+  currentLanguage = lang;
+  try {
+    localStorage.setItem('zentool_lang', lang);
+  } catch (e) {}
+
+  const select = document.getElementById('lang-select');
+  if (select && select.value !== lang) {
+    select.value = lang;
+  }
+
+  const dict = TRANSLATIONS[lang] || TRANSLATIONS['vi'];
+
+  // Apply translations to [data-i18n]
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) {
+      el.textContent = dict[key];
+    }
+  });
+
+  // Apply placeholders [data-i18n-ph]
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-ph');
+    if (dict[key]) {
+      el.setAttribute('placeholder', dict[key]);
+    }
+  });
+
+  // Update document title
+  if (dict['app.title']) {
+    document.title = dict['app.title'];
+  }
+}
+
+// Helper translation function
+function t(key) {
+  const dict = TRANSLATIONS[currentLanguage] || TRANSLATIONS['vi'];
+  return dict[key] || key;
+}
+
+
+// ============================================================
+// TOOL 12: BÓC TÁCH BẢNG BIỂU PDF SANG EXCEL (.XLSX) (PHASE 3)
+// ============================================================
+
+let currentPdfTableMatrix = null;
+let currentPdfTableFileName = 'ZenTool_BangBieu_TrichXuat';
+
+async function handlePdfTableUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    alert(currentLanguage === 'de' ? 'Bitte wählen Sie eine gültige PDF-Datei.' : (currentLanguage === 'en' ? 'Please select a valid PDF file.' : 'Vui lòng chọn file định dạng PDF.'));
+    return;
+  }
+
+  currentPdfTableFileName = file.name.replace(/\.[^/.]+$/, "");
+  const nameLabel = document.getElementById('pdf-table-file-name');
+  if (nameLabel) nameLabel.textContent = `Đang đọc: ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    if (!window.pdfjsLib) {
+      alert('Đang tải thư viện PDF.js, vui lòng thử lại sau 2 giây.');
+      return;
+    }
+
+    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdfDoc.numPages;
+    const allItems = [];
+
+    // Duyệt qua trang đầu (hoặc tối đa 5 trang để bóc tách bảng)
+    const pagesToScan = Math.min(numPages, 5);
+    for (let p = 1; p <= pagesToScan; p++) {
+      const page = await pdfDoc.getPage(p);
+      const textContent = await page.getTextContent();
+      textContent.items.forEach((it) => {
+        if (!it.str || !it.str.trim()) return;
+        allItems.push({
+          str: it.str.trim(),
+          x: it.transform[4],
+          y: it.transform[5] + (numPages - p) * 1000 // Offset Y giữa các trang
+        });
+      });
+    }
+
+    if (allItems.length === 0) {
+      alert('Không tìm thấy văn bản hoặc bảng biểu số liệu trong file PDF này (có thể là file scan dạng ảnh thuần).');
+      if (nameLabel) nameLabel.textContent = 'Không tìm thấy text trong file PDF.';
+      return;
+    }
+
+    // Gom nhóm theo hàng (tọa độ Y trong khoảng 10px)
+    // Sắp xếp Y giảm dần (từ trên xuống dưới trang)
+    allItems.sort((a, b) => b.y - a.y);
+
+    const rows = [];
+    let currentRow = [];
+    let currentY = allItems[0].y;
+
+    for (const item of allItems) {
+      if (Math.abs(item.y - currentY) <= 10) {
+        currentRow.push(item);
+      } else {
+        if (currentRow.length > 0) {
+          currentRow.sort((a, b) => a.x - b.x);
+          rows.push(currentRow);
+        }
+        currentRow = [item];
+        currentY = item.y;
+      }
+    }
+    if (currentRow.length > 0) {
+      currentRow.sort((a, b) => a.x - b.x);
+      rows.push(currentRow);
+    }
+
+    // Chuyển đổi thành ma trận 2D
+    const matrix = rows.map((r) => r.map((cell) => cell.str));
+    currentPdfTableMatrix = matrix;
+
+    if (nameLabel) nameLabel.textContent = `✓ Đã nhận diện ${matrix.length} dòng dữ liệu từ ${file.name}`;
+    const btnExport = document.getElementById('btn-export-pdf-table');
+    if (btnExport) btnExport.removeAttribute('disabled');
+
+    renderPdfTablePreview(matrix);
+    recordOfficeSessionHistory('Bóc Tách Bảng PDF Sang Excel', file.name);
+
+    if (typeof showToastNotification === 'function') {
+      showToastNotification(`Đã bóc tách thành công ${matrix.length} dòng bảng biểu!`);
+    }
+  } catch (err) {
+    console.error('Lỗi trích xuất bảng PDF:', err);
+    alert('Không thể trích xuất bảng từ file PDF này: ' + err.message);
+    if (nameLabel) nameLabel.textContent = 'Lỗi xử lý file.';
+  }
+}
+
+function renderPdfTablePreview(matrix) {
+  const container = document.getElementById('pdf-table-preview-container');
+  const box = document.getElementById('pdf-table-preview-box');
+  const meta = document.getElementById('pdf-table-preview-meta');
+
+  if (!container || !box) return;
+
+  const rowCount = matrix.length;
+  const colCount = Math.max(...matrix.map((r) => r.length), 0);
+
+  if (meta) meta.textContent = `${rowCount} dòng • ${colCount} cột`;
+
+  let html = '<table class="w-full border-collapse text-left">';
+  matrix.slice(0, 15).forEach((row, rIdx) => {
+    const isHeader = rIdx === 0;
+    const trClass = isHeader 
+      ? 'bg-emerald-100 dark:bg-emerald-950/60 font-bold text-emerald-900 dark:text-emerald-200' 
+      : 'hover:bg-slate-100 dark:hover:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700';
+    html += `<tr class="${trClass}">`;
+    row.forEach((cell) => {
+      const tag = isHeader ? 'th' : 'td';
+      html += `<${tag} class="p-1.5 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">${escapeHtml(cell)}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+
+  if (rowCount > 15) {
+    html += `<div class="p-1.5 text-center text-[10px] text-slate-400 italic bg-slate-100/60 dark:bg-slate-800">... và còn ${rowCount - 15} dòng nữa trong file Excel ...</div>`;
+  }
+
+  box.innerHTML = html;
+  container.classList.remove('hidden');
+}
+
+function executePdfTableToExcel() {
+  if (!currentPdfTableMatrix || currentPdfTableMatrix.length === 0) {
+    alert('Chưa có dữ liệu bảng biểu để xuất Excel.');
+    return;
+  }
+
+  try {
+    const ws = XLSX.utils.aoa_to_sheet(currentPdfTableMatrix);
+
+    // Tính toán độ rộng cột tự động
+    const colWidths = [];
+    currentPdfTableMatrix.forEach((row) => {
+      row.forEach((val, cIdx) => {
+        const len = String(val || '').length;
+        colWidths[cIdx] = Math.max(colWidths[cIdx] || 10, len + 3);
+      });
+    });
+    ws['!cols'] = colWidths.map((w) => ({ wch: Math.min(w, 50) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'BangBieu_ZenTool');
+
+    const fileName = `${currentPdfTableFileName}_ZenTool_BangBieu.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    if (typeof showToastNotification === 'function') {
+      showToastNotification(`Đã xuất file Excel: ${fileName}`);
+    }
+  } catch (err) {
+    console.error('Lỗi xuất file Excel:', err);
+    alert('Lỗi tạo file Excel: ' + err.message);
+  }
+}
+
+function loadSamplePdfTableTest() {
+  const sampleData = [
+    ['STT', 'Ngày Giao Dịch', 'Số Tài Khoản Đối Ứng', 'Nội Dung Chi Tiết', 'Số Tiền Thu (VNĐ)', 'Số Tiền Chi (VNĐ)', 'Số Dư Khả Dụng'],
+    ['1', '15/10/2026', '0912345678', 'Thanh toan tien hang don Shopee #982134', '1.250.000', '0', '45.890.000'],
+    ['2', '16/10/2026', '0988776655', 'Tra cuoc van chuyen J&T Express thang 10', '0', '320.000', '45.570.000'],
+    ['3', '17/10/2026', '1029384756', 'Khach hang Nguyen Van A chuyen khoan coc', '5.000.000', '0', '50.570.000'],
+    ['4', '18/10/2026', '1903456789', 'Chi tien nhap bao bi va hop carton', '0', '1.450.000', '49.120.000'],
+    ['5', '19/10/2026', '0345678912', 'TikTok Shop Affiliate Hoa Hong T10/2026', '8.650.000', '0', '57.770.000'],
+    ['6', '20/10/2026', '0001112223', 'Dong thue GTGT va TNCN quy 3/2026', '0', '2.500.000', '55.270.000']
+  ];
+
+  currentPdfTableMatrix = sampleData;
+  currentPdfTableFileName = 'SaoKe_NganHang_Mau';
+
+  const nameLabel = document.getElementById('pdf-table-file-name');
+  if (nameLabel) nameLabel.textContent = '✓ Đang hiển thị: Sao kê ngân hàng mẫu (7 dòng)';
+
+  const btnExport = document.getElementById('btn-export-pdf-table');
+  if (btnExport) btnExport.removeAttribute('disabled');
+
+  renderPdfTablePreview(sampleData);
+
+  if (typeof showToastNotification === 'function') {
+    showToastNotification('Đã nạp 7 dòng bảng sao kê mẫu! Anh có thể bấm Xuất Excel ngay.');
+  }
+}
+
+function clearPdfTableExtractor() {
+  currentPdfTableMatrix = null;
+  const fileInput = document.getElementById('pdf-table-file-input');
+  if (fileInput) fileInput.value = '';
+  const nameLabel = document.getElementById('pdf-table-file-name');
+  if (nameLabel) nameLabel.textContent = '100% trong RAM trình duyệt, không tải lên server';
+  const btnExport = document.getElementById('btn-export-pdf-table');
+  if (btnExport) btnExport.setAttribute('disabled', 'true');
+  const container = document.getElementById('pdf-table-preview-container');
+  if (container) container.classList.add('hidden');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+
+// ============================================================
+// PHÂN HỆ XÓA NỀN ẢNH 1 CHẠM 100% CLIENT-SIDE IN RAM (PHASE 3)
+// ============================================================
+
+const bgRemoveState = {
+  originalImage: null,
+  originalCanvas: null,
+  originalCtx: null,
+  workingCanvas: null,
+  workingCtx: null,
+  bgColor: { r: 255, g: 255, b: 255 },
+  tolerance: 35,
+  feather: 12,
+  eyedropperMode: false,
+  fileName: 'image.png'
+};
+
+function handleBgRemoveUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Vui lòng chọn file hình ảnh (JPG, PNG, WebP).');
+    return;
+  }
+
+  bgRemoveState.fileName = file.name || 'image.png';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      loadBgRemoveImage(img);
+    };
+    img.onerror = () => {
+      alert('Không thể đọc ảnh. Vui lòng thử ảnh khác.');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadBgRemoveImage(img) {
+  const MAX_DIM = 2400;
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  if (!w || !h) return;
+
+  if (w > MAX_DIM || h > MAX_DIM) {
+    const scale = Math.min(MAX_DIM / w, MAX_DIM / h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+
+  bgRemoveState.originalImage = img;
+
+  // Offscreen immutable source canvas
+  const oc = document.createElement('canvas');
+  oc.width = w;
+  oc.height = h;
+  const octx = oc.getContext('2d', { willReadFrequently: true });
+  octx.drawImage(img, 0, 0, w, h);
+  bgRemoveState.originalCanvas = oc;
+  bgRemoveState.originalCtx = octx;
+
+  // Working canvas
+  const wc = document.getElementById('bgremove-canvas');
+  if (!wc) return;
+  wc.width = w;
+  wc.height = h;
+  const wctx = wc.getContext('2d', { willReadFrequently: true });
+  wctx.drawImage(oc, 0, 0);
+  bgRemoveState.workingCanvas = wc;
+  bgRemoveState.workingCtx = wctx;
+
+  // Tự động nhận diện màu nền bằng cách lấy mẫu 4 góc viền
+  bgRemoveState.bgColor = sampleCornerColor(octx, w, h);
+  updateBgColorSwatchUI();
+
+  // Bật sự kiện nhấp chuột chọn màu (eyedropper)
+  wc.onclick = onBgRemoveCanvasClick;
+
+  // Xử lý tách nền ngay lập tức
+  processBgRemoval();
+
+  const metaLabel = document.getElementById('bgremove-meta-label');
+  if (metaLabel) {
+    metaLabel.textContent = `${w} × ${h} px • Đã tách nền PNG`;
+  }
+}
+
+function sampleCornerColor(ctx, w, h) {
+  const patch = Math.max(2, Math.floor(Math.min(w, h) * 0.02));
+  const corners = [
+    [0, 0],
+    [w - patch, 0],
+    [0, h - patch],
+    [w - patch, h - patch]
+  ];
+  let r = 0, g = 0, b = 0, count = 0;
+
+  for (const [cx, cy] of corners) {
+    const data = ctx.getImageData(cx, cy, patch, patch).data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 10) continue;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      count++;
+    }
+  }
+  if (count === 0) return { r: 255, g: 255, b: 255 };
+  return {
+    r: Math.round(r / count),
+    g: Math.round(g / count),
+    b: Math.round(b / count)
+  };
+}
+
+function updateBgColorSwatchUI() {
+  const swatch = document.getElementById('bgremove-color-swatch');
+  if (swatch) {
+    const { r, g, b } = bgRemoveState.bgColor;
+    swatch.style.background = `rgb(${r}, ${g}, ${b})`;
+    swatch.title = `Màu nền: RGB(${r}, ${g}, ${b})`;
+  }
+}
+
+function setBgRemoveTolerance(val) {
+  bgRemoveState.tolerance = Number(val);
+  const label = document.getElementById('bgremove-tolerance-val');
+  if (label) label.textContent = `${val}%`;
+  processBgRemoval();
+}
+
+function setBgRemoveFeather(val) {
+  bgRemoveState.feather = Number(val);
+  const label = document.getElementById('bgremove-feather-val');
+  if (label) label.textContent = `${val}%`;
+  processBgRemoval();
+}
+
+function toggleEyedropper() {
+  bgRemoveState.eyedropperMode = !bgRemoveState.eyedropperMode;
+  const btn = document.getElementById('bgremove-eyedropper-btn');
+  const canvas = document.getElementById('bgremove-canvas');
+
+  if (bgRemoveState.eyedropperMode) {
+    if (btn) btn.className = "px-3 py-1.5 rounded-lg border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 font-bold text-emerald-700 dark:text-emerald-300 transition flex items-center gap-1.5 shadow-sm";
+    if (canvas) canvas.style.cursor = 'crosshair';
+  } else {
+    if (btn) btn.className = "px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 shadow-sm";
+    if (canvas) canvas.style.cursor = 'default';
+  }
+}
+
+function onBgRemoveCanvasClick(event) {
+  if (!bgRemoveState.originalCanvas || !bgRemoveState.workingCanvas) return;
+
+  const canvas = bgRemoveState.workingCanvas;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  const x = Math.floor((event.clientX - rect.left) * scaleX);
+  const y = Math.floor((event.clientY - rect.top) * scaleY);
+
+  if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+
+  // Lấy màu tại điểm người dùng nhấp chuột từ canvas gốc
+  const pixel = bgRemoveState.originalCtx.getImageData(x, y, 1, 1).data;
+  bgRemoveState.bgColor = { r: pixel[0], g: pixel[1], b: pixel[2] };
+  updateBgColorSwatchUI();
+  processBgRemoval();
+
+  if (bgRemoveState.eyedropperMode) {
+    toggleEyedropper(); // Tắt eyedropper sau khi chọn xong
+  }
+}
+
+function processBgRemoval() {
+  if (!bgRemoveState.originalCanvas || !bgRemoveState.workingCanvas) return;
+
+  const w = bgRemoveState.originalCanvas.width;
+  const h = bgRemoveState.originalCanvas.height;
+  const src = bgRemoveState.originalCtx.getImageData(0, 0, w, h);
+  const out = bgRemoveState.workingCtx.createImageData(w, h);
+
+  const s = src.data;
+  const d = out.data;
+  const bg = bgRemoveState.bgColor;
+
+  const MAX_DIST = Math.sqrt(3) * 255; // ≈ 441.67
+  const tolDist = (bgRemoveState.tolerance / 100) * MAX_DIST;
+  const featherDist = (bgRemoveState.feather / 100) * MAX_DIST;
+  const softEnd = tolDist + featherDist;
+
+  for (let i = 0; i < s.length; i += 4) {
+    const r = s[i], g = s[i + 1], b = s[i + 2], a = s[i + 3];
+
+    if (a === 0) {
+      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 0;
+      continue;
+    }
+
+    const dr = r - bg.r;
+    const dg = g - bg.g;
+    const db = b - bg.b;
+    const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+    if (dist <= tolDist) {
+      // Trong suốt hoàn toàn
+      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 0;
+    } else if (dist <= softEnd && featherDist > 0) {
+      // Làm mịn chuyển màu viền (feathering anti-aliasing)
+      const t = (dist - tolDist) / featherDist;
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+      d[i + 3] = Math.round(a * t);
+    } else {
+      // Giữ nguyên pixel sản phẩm
+      d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = a;
+    }
+  }
+
+  bgRemoveState.workingCtx.putImageData(out, 0, 0);
+}
+
+function downloadBgRemovedPng() {
+  const canvas = bgRemoveState.workingCanvas;
+  if (!canvas || !bgRemoveState.originalCanvas) {
+    alert('Vui lòng chọn hoặc nạp ảnh trước khi tải.');
+    return;
+  }
+
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const baseName = bgRemoveState.fileName.replace(/\.[^/.]+$/, "");
+    const downloadName = `${baseName}_ZenTool_XoaNen.png`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    recordOfficeSessionHistory('Tách Nền Ảnh 1 Chạm (PNG)', downloadName);
+
+    if (typeof showToastNotification === 'function') {
+      showToastNotification(`Đã tải ảnh PNG trong suốt: ${downloadName}`);
+    }
+  }, 'image/png');
+}
+
+function loadSampleBgRemoveTest() {
+  // Tạo ảnh mẫu sản phẩm thương mại điện tử (Hộp quà may mắn với ruy băng và bóng đổ trên nền trắng)
+  const canvas = document.createElement('canvas');
+  canvas.width = 600;
+  canvas.height = 600;
+  const ctx = canvas.getContext('2d');
+
+  // Nền trắng tinh khiết (mô phỏng phông nền chụp studio của Shopee/TikTok)
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 600, 600);
+
+  // Vẽ bóng đổ dưới đáy hộp
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(300, 480, 140, 22, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+  ctx.filter = 'blur(6px)';
+  ctx.fill();
+  ctx.restore();
+
+  // Vẽ thân hộp quà (gradient màu đỏ cam ruby sang trọng)
+  const boxGrad = ctx.createLinearGradient(180, 260, 420, 480);
+  boxGrad.addColorStop(0, '#ef4444');
+  boxGrad.addColorStop(0.5, '#dc2626');
+  boxGrad.addColorStop(1, '#991b1b');
+  ctx.fillStyle = boxGrad;
+  ctx.beginPath();
+  ctx.roundRect(190, 280, 220, 190, 16);
+  ctx.fill();
+
+  // Nắp hộp quà
+  const lidGrad = ctx.createLinearGradient(170, 240, 430, 290);
+  lidGrad.addColorStop(0, '#f87171');
+  lidGrad.addColorStop(1, '#b91c1c');
+  ctx.fillStyle = lidGrad;
+  ctx.beginPath();
+  ctx.roundRect(175, 240, 250, 50, 12);
+  ctx.fill();
+
+  // Ruy băng vàng hoàng gia
+  const ribbonGrad = ctx.createLinearGradient(275, 240, 325, 470);
+  ribbonGrad.addColorStop(0, '#fde047');
+  ribbonGrad.addColorStop(0.5, '#eab308');
+  ribbonGrad.addColorStop(1, '#ca8a04');
+  ctx.fillStyle = ribbonGrad;
+  ctx.fillRect(280, 240, 40, 230); // Dải dọc
+
+  // Nơ ruy băng uốn lượn trên đỉnh
+  ctx.fillStyle = '#fde047';
+  ctx.beginPath();
+  ctx.ellipse(260, 225, 30, 18, -Math.PI / 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(340, 225, 30, 18, Math.PI / 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(300, 235, 14, 0, Math.PI * 2);
+  ctx.fillStyle = '#eab308';
+  ctx.fill();
+
+  // Huy hiệu "ZenTool Pro"
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('ZenTool VIP', 300, 390);
+
+  // Chuyển canvas mẫu thành Image
+  const img = new Image();
+  img.onload = () => {
+    bgRemoveState.fileName = 'HopQua_SanPham_Mau.jpg';
+    loadBgRemoveImage(img);
+
+    if (typeof showToastNotification === 'function') {
+      showToastNotification('Đã nạp ảnh mẫu sản phẩm studio! Anh có thể xem nền trong suốt hoặc bấm Tải PNG ngay.');
+    }
+  };
+  img.src = canvas.toDataURL('image/jpeg', 0.95);
+}
+
+function clearBgRemove() {
+  bgRemoveState.originalImage = null;
+  bgRemoveState.originalCanvas = null;
+  bgRemoveState.workingCanvas = null;
+
+  const canvas = document.getElementById('bgremove-canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const fileInput = document.getElementById('bgremove-file-input');
+  if (fileInput) fileInput.value = '';
+
+  const metaLabel = document.getElementById('bgremove-meta-label');
+  if (metaLabel) metaLabel.textContent = 'Chưa có ảnh';
+
+  const swatch = document.getElementById('bgremove-color-swatch');
+  if (swatch) swatch.style.background = 'rgb(255,255,255)';
 }
