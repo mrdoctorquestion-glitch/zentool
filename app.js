@@ -2312,7 +2312,8 @@ function calculateDetailedProfit() {
 
   // Update KPI Cards
   document.getElementById('kpi-net-profit').textContent = `${Math.round(netProfit).toLocaleString('vi-VN')} đ`;
-  document.getElementById('kpi-net-margin').textContent = `Biên lãi ròng: ${netMargin.toFixed(1)}%`;
+  const marginPrefix = currentLanguage === 'de' ? 'Netto-Gewinnmarge:' : (currentLanguage === 'en' ? 'Net Margin:' : 'Biên lãi ròng:');
+  document.getElementById('kpi-net-margin').textContent = `${marginPrefix} ${netMargin.toFixed(1)}%`;
   document.getElementById('kpi-payout').textContent = `${Math.round(netPayout).toLocaleString('vi-VN')} đ`;
 
   // Color Coding KPI
@@ -2848,169 +2849,732 @@ function downloadCompressedImage() {
 
 
 // ============================================================
-// PHÂN HỆ ĐA NGÔN NGỮ (i18n): VI / EN / DE (100% CLIENT-SIDE)
+// HỆ THỐNG ĐA NGÔN NGỮ TOÀN NĂNG (UNIVERSAL i18n ENGINE): VI / EN / DE
+// Đồng bộ 100% toàn bộ giao diện: Tab 1 (XML), Tab 2 (12 PDF Tools),
+// Tab 3 (Lợi nhuận sàn & Thuế), Tab 4 (Studio ảnh & Tách nền),
+// Bảng kê, Hộp thoại Modal, Nút bấm, Placeholder, Tooltips & Báo cáo.
 // ============================================================
 
 const TRANSLATIONS = {
-  vi: {
-    // Header & Meta
-    'app.title': 'ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận 100% Client-Side',
-    'header.security': '100% Riêng Tư Tại Máy Bạn',
-    'header.slogan': 'Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server',
-    'btn.share': 'Chia sẻ',
-
-    // Main Navigation
-    'nav.invoice': 'Đọc & Gom Hóa Đơn XML',
-    'nav.files': 'Ghép File & Tiện Ích Văn Phòng',
-    'nav.profit': 'Lợi Nhuận Sàn & Thuế 2026',
-    'nav.media': 'Studio Ảnh & Đổi HEIC',
-    'nav.invoiceShort': 'Hóa Đơn XML',
-    'nav.filesShort': 'Ghép File & Tiện Ích',
-    'nav.profitShort': 'Lãi Sàn & Thuế',
-    'nav.mediaShort': 'Studio Ảnh',
-
-    // Tab 2 Filters
-    'filter.all': 'Tất Cả (12 Công Cụ)',
-    'filter.pages': '📑 Ghép & Xử Lý Trang (4)',
-    'filter.convert': '🔄 Chuyển Đổi & Nén (4)',
-    'filter.security': '🔒 Ký Tên & Bảo Mật (4)',
-
-    // Tool 12: PDF Table Extractor
-    'tool12.title': 'Bóc Tách Bảng PDF Sang Excel',
-    'tool12.desc': 'Tự động nhận diện dòng/cột & xuất file .xlsx sạch sẽ',
-    'tool12.prompt': 'Chọn PDF chứa bảng biểu (Sao kê, Báo cáo)',
-    'tool12.hint': '100% trong RAM trình duyệt, không tải lên server',
-    'tool12.btnExport': 'Xuất Excel (.xlsx)',
-    'tool12.btnSample': 'Mẫu',
-    'tool12.preview': 'Xem trước số liệu',
-
-    // Tab 4: Sub-tabs
-    'media.subtab.heic': 'Đổi Ảnh HEIC (iPhone)',
-    'media.subtab.compress': 'Nén Ảnh WebP',
-    'media.subtab.bgremove': 'Tách Nền Ảnh (PNG Trong Suốt)',
-
-    // Background Remover
-    'bgremove.bannerTitle': 'TÁCH NỀN ẢNH 1 CHẠM 100% TRONG RAM — KHÔNG WATERMARK, KHÔNG GIỚI HẠN',
-    'bgremove.bannerDesc': 'Giải pháp thay thế hoàn hảo cho Remove.bg và Canva Pro: Tách phông nền trắng/màu đơn sắc của ảnh sản phẩm, ảnh chụp chân dung và xuất thẳng file PNG trong suốt Full HD. Xử lý 100% tại trình duyệt máy tính của bạn, không upload ảnh lên mạng, không yêu cầu đăng ký hay thẻ tín dụng.',
-    'bgremove.uploadPrompt': 'Chọn hoặc kéo thả ảnh cần tách nền vào đây',
-    'bgremove.uploadHint': 'Hỗ trợ JPG, PNG, WebP (Ảnh sản phẩm, logo, chân dung)',
-    'bgremove.toleranceLabel': 'Độ nhạy xóa màu (Tolerance):',
-    'bgremove.toleranceHint': 'Kéo tăng nếu còn sót viền nền; kéo giảm nếu bị ăn lẹm vào chi tiết sản phẩm.',
-    'bgremove.featherLabel': 'Làm mịn & Khử răng cưa (Feathering):',
-    'bgremove.colorLabel': 'Màu nền nhận diện',
-    'bgremove.eyedropperBtn': 'Chấm màu trên ảnh',
-    'bgremove.btnDownload': 'Tải PNG Trong Suốt (Full HD)',
-    'bgremove.btnSample': 'Thử Ảnh Mẫu (1-Click)',
-    'bgremove.previewTitle': 'Kết Quả Trong Suốt Thời Gian Thực',
-    'bgremove.canvasHint': '💡 Nền caro biểu thị vùng trong suốt. Khi chèn lên web hoặc sàn Shopee/TikTok, nền sẽ tự động hòa vào ảnh nền đích.'
-  },
-
+  vi: {},
   en: {
-    // Header & Meta
-    'app.title': 'ZenTool Suite — 100% Client-Side Privacy-First Productivity & Profit Suite',
-    'header.security': '100% In-Browser Privacy',
-    'header.slogan': '100% Free • Zero Cost • No Server Storage Or Tracking',
-    'btn.share': 'Share',
-
-    // Main Navigation
-    'nav.invoice': 'Parse & Merge XML Invoices',
-    'nav.files': 'Merge & Office PDF Suite',
-    'nav.profit': 'E-Commerce Profit & Taxes 2026',
-    'nav.media': 'Photo Studio & HEIC Converter',
-    'nav.invoiceShort': 'XML Invoices',
-    'nav.filesShort': 'Office PDF Suite',
-    'nav.profitShort': 'Profit & Tax',
-    'nav.mediaShort': 'Photo Studio',
-
-    // Tab 2 Filters
-    'filter.all': 'All (12 Tools)',
-    'filter.pages': '📑 Pages & Merge (4)',
-    'filter.convert': '🔄 Convert & Compress (4)',
-    'filter.security': '🔒 Sign & Protect (4)',
-
-    // Tool 12: PDF Table Extractor
-    'tool12.title': 'Extract PDF Table to Excel',
-    'tool12.desc': 'Auto-detect rows/columns and export clean .xlsx',
-    'tool12.prompt': 'Select PDF with tables (Bank statements, reports)',
-    'tool12.hint': '100% in local RAM, never uploaded to any server',
-    'tool12.btnExport': 'Export Excel (.xlsx)',
-    'tool12.btnSample': 'Sample',
-    'tool12.preview': 'Live Data Preview',
-
-    // Tab 4: Sub-tabs
-    'media.subtab.heic': 'Convert iPhone HEIC',
-    'media.subtab.compress': 'Compress to WebP',
-    'media.subtab.bgremove': '1-Touch Background Remover (PNG)',
-
-    // Background Remover
-    'bgremove.bannerTitle': '1-TOUCH BACKGROUND REMOVER IN RAM — NO WATERMARK, UNLIMITED',
-    'bgremove.bannerDesc': 'Free alternative to Remove.bg & Canva Pro: Remove white or solid backgrounds from product photos & portraits and export transparent Full HD PNGs directly in your browser. Zero server uploads, no login, no credit card required.',
-    'bgremove.uploadPrompt': 'Click or drop image here to remove background',
-    'bgremove.uploadHint': 'Supports JPG, PNG, WebP (Products, logos, portraits)',
-    'bgremove.toleranceLabel': 'Color Removal Sensitivity (Tolerance):',
-    'bgremove.toleranceHint': 'Increase if background borders remain; decrease if product edges are clipped.',
-    'bgremove.featherLabel': 'Edge Smoothing & Anti-Aliasing (Feathering):',
-    'bgremove.colorLabel': 'Detected Background Color',
-    'bgremove.eyedropperBtn': 'Pick Color From Canvas',
-    'bgremove.btnDownload': 'Download Transparent PNG (Full HD)',
-    'bgremove.btnSample': 'Sample Product (1-Click)',
-    'bgremove.previewTitle': 'Real-Time Transparent Preview',
-    'bgremove.canvasHint': '💡 The checkered background indicates transparency. When used on websites or marketplace listings, it blends seamlessly.'
-  },
-
+  "(Bạn hoàn toàn có thể rút dây mạng hoặc ngắt Wifi mà trang web vẫn đọc hóa đơn bình thường 100%)": "(You can completely unplug the network cable or turn off Wi-Fi and the site will still read invoices normally, 100%)",
+  "(Ký điện tử hợp lệ bởi Doanh nghiệp)": "(Electronically signed and valid per the Business)",
+  "(Ký, ghi rõ họ tên)": "(Sign and print full name clearly)",
+  "...": "...",
+  "0 VND": "0 VND",
+  "0 dòng • 0 cột": "0 rows • 0 columns",
+  "0 đ": "0 VND",
+  "1. Sàn Giao Dịch:": "1. Marketplace:",
+  "1. Tăng Tốc Độ Mở Trang Web Gấp 5 Lần": "1. Speed Up Website Loading 5x",
+  "1.5% Doanh Thu": "1.5% of Revenue",
+  "100% RAM": "100% RAM",
+  "100% Riêng Tư Tại Máy Bạn": "100% In-Browser Privacy",
+  "100% trong RAM trình duyệt, không tải lên server": "100% in browser RAM, never uploaded to a server",
+  "12%": "12%",
+  "2. Chọn Ngành Hàng Sản Phẩm:": "2. Select Product Category:",
+  "2. Gửi Email Không Bị Báo Lỗi Vượt 25MB": "2. Send Emails Without 25MB Size Errors",
+  "3. Đăng Bán Trên Shopee & TikTok Shop Không Bị Từ Chối": "3. List on Shopee & TikTok Shop Without Rejection",
+  "35%": "35%",
+  "4. Tiết Kiệm Dung Lượng Ổ Cứng & Google Drive": "4. Save Disk & Google Drive Storage",
+  "80%": "80%",
+  "80% là mức vàng: Dung lượng giảm 75% mà mắt thường không thấy khác biệt.": "80% is the sweet spot: file size drops 75% with no visible difference to the naked eye.",
+  "Bao Bì Đóng Gói (đ):": "Packaging Cost (VND):",
+  "Biên lãi: 0%": "Profit margin: 0%",
+  "Bóc Tách Bảng PDF Sang Excel": "Extract PDF Tables to Excel",
+  "Bấm \\\"Xem\\\" để mở bản in chi tiết từng hóa đơn": "Click \\\"View\\\" to open the detailed printout of each invoice",
+  "Bấm \\\"Xóa\\\" trên trang để loại bỏ hoặc mũi tên để dời vị trí:": "Click \\\"Delete\\\" on a page to remove it, or the arrows to reorder:",
+  "Bộ Siêu Tiện Ích PDF Văn Phòng Toàn Năng (11 Trong 1)": "All-in-One Office PDF Super Toolkit (11-in-1)",
+  "CAM KẾT BẢO MẬT 100%: DỮ LIỆU CỦA BẠN KHÔNG BAO GIỜ TẢI LÊN MÁY CHỦ": "100% PRIVACY GUARANTEE: YOUR DATA IS NEVER UPLOADED TO A SERVER",
+  "Cam kết 100% trong RAM: Mật khẩu và số dư không bao giờ gửi lên mạng.": "100% in-RAM guarantee: passwords and balances are never sent over the network.",
+  "Cam kết bảo mật 100% Client-Side • Hoàn toàn Miễn phí": "100% Client-Side Privacy Guarantee • Completely Free",
+  "Chi Tiết Khấu Trừ Thực Tế:": "Actual Deduction Breakdown:",
+  "Chi phí Ads, Đóng gói & Affiliate:": "Ad, Packaging & Affiliate Costs:",
+  "Chia sẻ": "Share",
+  "Chuyển văn bản TCVN3 (.VNTime) sang Unicode chuẩn": "Convert TCVN3 (.VNTime) text to standard Unicode",
+  "Chuyển đổi hàng loạt ảnh .HEIC từ iPhone sang JPG/PNG trong 2 giây & nén WebP siêu nhẹ. 100% trong RAM máy tính.": "Batch-convert iPhone .HEIC photos to JPG/PNG in 2 seconds & compress to ultra-light WebP. 100% in your computer's RAM.",
+  "Chưa chọn ảnh": "No images selected",
+  "Chưa có hóa đơn nào được tải": "No invoices have been loaded yet",
+  "Chưa có thao tác nào trong phiên này. Mọi thao tác xong sẽ hiển thị tại đây để anh dễ theo dõi.": "No actions in this session yet. Completed actions will appear here so you can easily track them.",
+  "Chưa có ảnh": "No images yet",
+  "Chưa có ảnh HEIC nào được chuyển đổi": "No HEIC images have been converted yet",
+  "Chấm màu trên ảnh": "Pick color from image",
+  "Chất Lượng Xuất Ảnh:": "Image Export Quality:",
+  "Chất lượng nén:": "Compression quality:",
+  "Chế độ nén:": "Compression mode:",
+  "Chọn 1 file PDF để tách": "Select 1 PDF file to split",
+  "Chọn PDF chứa bảng biểu (Sao kê, Báo cáo)": "Select a PDF containing tables (Statements, Reports)",
+  "Chọn các file PDF để gộp": "Select PDF files to merge",
+  "Chọn các ảnh từ iPhone (.heic) kéo vào khung bên trái, hoặc bấm \\\"⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu\\\" để trải nghiệm.": "Drag iPhone photos (.heic) into the left panel, or click \\\"⚡ Try Sample Image Conversion\\\" to experience it.",
+  "Chọn file Hợp Đồng PDF để ký": "Select a PDF Contract file to sign",
+  "Chọn file PDF sao kê bị khóa": "Select a locked PDF statement file",
+  "Chọn file PDF để lấy ảnh": "Select a PDF file to extract images",
+  "Chọn file PDF để nén": "Select a PDF file to compress",
+  "Chọn file PDF để xoay": "Select a PDF file to rotate",
+  "Chọn file PDF để xếp trang": "Select a PDF file to arrange pages",
+  "Chọn file PDF để đóng dấu": "Select a PDF file to stamp",
+  "Chọn hoặc kéo thả ảnh cần tách nền vào đây": "Select or drag & drop the image to remove the background here",
+  "Chọn nhiều ảnh (JPG, PNG)": "Select multiple images (JPG, PNG)",
+  "Chờ nén...": "Compressing...",
+  "Chữ Ký Số Hợp Lệ": "Valid Digital Signature",
+  "Copy": "Copy",
+  "Cứu Lỗi Font Tiếng Việt": "Fix Vietnamese Font Errors",
+  "Doanh thu bán ra (Giá cho khách):": "Sales Revenue (Customer Price):",
+  "Dán văn bản bị lỗi font chữ ô vuông/loạn mã vào đây...": "Paste text with square-box/garbled font errors here...",
+  "Dùng chuột hoặc ngón tay để vẽ chữ ký": "Use your mouse or finger to draw your signature",
+  "Dữ liệu chỉ tồn tại tạm thời trong RAM máy tính. Khi bấm xóa, toàn bộ dấu vết sẽ biến mất vĩnh viễn.": "Data exists only temporarily in your computer's RAM. When you click delete, all traces disappear permanently.",
+  "Ghép File & Tiện Ích": "Office PDF Suite",
+  "Ghép File & Tiện Ích Văn Phòng": "Merge & Office PDF Suite",
+  "Ghép Ảnh Thành File PDF": "Merge Images into PDF",
+  "Ghép ảnh chụp CCCD, bằng lái, hợp đồng thành 1 PDF": "Merge photos of ID cards, driver's licenses, and contracts into 1 PDF",
+  "Giá Bán Cho Khách (VND):": "Customer Selling Price (VND):",
+  "Giá Nhập / Giá Vốn (VND):": "Purchase Price / Cost Price (VND):",
+  "Giá vốn sản phẩm (COGS):": "Product Cost (COGS):",
+  "Giảm nhẹ dung lượng để gửi mail & lưu trữ": "Slightly reduce file size for email & storage",
+  "Gói Dịch Vụ Sàn Tùy Chọn:": "Optional Marketplace Service Packages:",
+  "Gói Freeship Xtra (Shopee 6% / TikTok 5.5%)": "Freeship Xtra Package (Shopee 6% / TikTok 5.5%)",
+  "Gói Voucher Xtra (4%)": "Voucher Xtra Package (4%)",
+  "Gộp & Lưu Về Máy Ngay": "Merge & Save to Device Now",
+  "Gộp Nhiều File PDF": "Merge Multiple PDF Files",
+  "Gỡ pass sao kê VCB, MB, Techcombank, lương": "Remove password from VCB, MB, Techcombank, payroll statements",
+  "HOT": "HOT",
+  "Hao hụt hoàn hàng & vận chuyển chiều về:": "Return & return-shipping loss:",
+  "Hiển thị 0 hóa đơn": "Showing 0 invoices",
+  "Hoa Hồng Affiliate (%):": "Affiliate Commission (%):",
+  "HÓA ĐƠN GIÁ TRỊ GIA TĂNG": "VALUE ADDED TAX INVOICE",
+  "Hóa Đơn XML": "XML Invoices",
+  "Hỗ trợ JPG, PNG, WEBP dung lượng tối đa 25MB": "Supports JPG, PNG, WEBP up to 25MB",
+  "Hỗ trợ JPG, PNG, WebP (Ảnh sản phẩm, logo, chân dung)": "Supports JPG, PNG, WebP (product photos, logos, portraits)",
+  "Hỗ trợ chọn 50 - 100 ảnh iPhone cùng lúc": "Supports selecting 50 - 100 iPhone photos at once",
+  "Hỗ trợ chọn nhiều file cùng lúc (hoặc 1 file đơn)": "Supports selecting multiple files at once (or a single file)",
+  "In Hóa Đơn / Lưu PDF": "Print Invoice / Save PDF",
+  "Khấu trừ Thuế TNCN (0.5%) & Thuế GTGT (1%) cho hộ kinh doanh cá nhân": "Personal Income Tax (0.5%) & VAT (1%) deduction for individual businesses",
+  "Kéo thả các file .HEIC vào đây": "Drag & drop .HEIC files here",
+  "Kéo thả các file .XML vào đây": "Drag & drop .XML files here",
+  "Kéo thả ảnh vào đây để nén": "Drag & drop images here to compress",
+  "Kéo tăng nếu còn sót viền nền; kéo giảm nếu bị ăn lẹm vào chi tiết sản phẩm.": "Increase if background edges remain; decrease if it eats into product details.",
+  "Ký Tên Lên Hợp Đồng PDF\\n TIỆN ÍCH": "Sign PDF Contracts\\n UTILITY",
+  "Ký hiệu: ...": "Symbol: ...",
+  "Ký vào trang:": "Sign on page:",
+  "Kết Quả Trong Suốt Thời Gian Thực": "Real-Time Results",
+  "Kết quả tiếng Việt chuẩn Unicode sẽ hiện ở đây...": "Standard Unicode Vietnamese result will appear here...",
+  "Làm mịn & Khử răng cưa (Feathering):": "Smoothing & Feathering:",
+  "Lãi Sàn & Thuế": "Profit & Tax",
+  "Lọc theo Tên người bán, MST, Số hóa đơn...": "Filter by Seller Name, Tax ID, Invoice Number...",
+  "Lợi Nhuận Ròng / Đơn:": "Net Profit / Order:",
+  "Lợi Nhuận Sàn": "Marketplace Profit",
+  "Lợi Nhuận Sàn & Thuế 2026": "E-Commerce Profit & Taxes 2026",
+  "Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server": "100% Free • Zero Cost • No Server Storage Or Tracking",
+  "Màu nền nhận diện": "Brand background color",
+  "Mã số thuế: ...": "Tax ID: ...",
+  "Mẫu": "Sample",
+  "Mở Khóa & Lưu File PDF Sạch": "Unlock & Save Clean PDF File",
+  "Mở Khóa Mật Khẩu PDF\\n 100% RAM": "Unlock PDF Password\\n 100% RAM",
+  "Nghĩa vụ Thuế TMĐT (1.5% DT):": "E-commerce Tax Obligation (1.5% of Revenue):",
+  "Ngày lập: ...": "Issue date: ...",
+  "Người Bán Hàng": "Seller",
+  "Người Mua Hàng": "Buyer",
+  "Người mua: ...": "Buyer: ...",
+  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Enter stamp text (e.g., COPY, CONFIDENTIAL)",
+  "Nhập mật khẩu (CCCD hoặc ngày sinh)...": "Enter password (ID number or date of birth)...",
+  "Nhật Ký Phiên Làm Việc\\n 0": "Session Activity Log\\n 0",
+  "Nén & Tải Về Máy": "Compress & Download",
+  "Nén Dung Lượng PDF\\n HOT": "Compress PDF Size\\n HOT",
+  "Nén Ảnh": "Compress Images",
+  "Nén Ảnh WebP": "Compress to WebP",
+  "Nối nhiều file chứng từ, hợp đồng thành 1": "Combine multiple document and contract files into 1",
+  "Phí cố định hoa hồng theo ngành:": "Fixed category commission fee:",
+  "Phí giao dịch thanh toán & hạ tầng:": "Payment transaction & infrastructure fees:",
+  "Phí gói Freeship Xtra & Voucher Xtra:": "Freeship Xtra & Voucher Xtra package fees:",
+  "Quay Lại Bảng Kê": "Back to Statement",
+  "Sau khi sàn trừ hết các khoản": "After the marketplace deducts all fees",
+  "Shopee": "Shopee",
+  "Studio Ảnh": "Photo Studio",
+  "Số tiền viết bằng chữ: ...": "Amount in words: ...",
+  "Số tài khoản: ...": "Account number: ...",
+  "Số: ...": "No.: ...",
+  "Sửa tài liệu scan bị ngược hoặc nằm ngang": "Fix scanned documents that are upside down or sideways",
+  "TIỆN ÍCH": "UTILITY",
+  "Thuế TMĐT (Thông tư 40/2021/TT-BTC):": "E-commerce Tax (Circular 40/2021/TT-BTC):",
+  "Thêm chữ chìm bảo vệ chứng từ chống sao chép": "Add watermark to protect documents against copying",
+  "Thông báo": "Notification",
+  "Thử Ảnh Mẫu (1-Click)": "Try Sample Image (1-Click)",
+  "TikTok Shop": "TikTok Shop",
+  "Tiền Ads/Đơn (đ):": "Ad Cost/Order (VND):",
+  "Tiền Hàng (Chưa Thuế)": "Goods Amount (Excl. Tax)",
+  "Tiền Sàn Trả Về (Payout):": "Marketplace Payout:",
+  "Tiền Thuế GTGT": "VAT Amount",
+  "Tiền thuế GTGT:": "VAT amount:",
+  "Tiền tệ: VND": "Currency: VND",
+  "Trích Xuất & Tải File ZIP": "Extract & Download ZIP File",
+  "Trích Xuất PDF Sang Ảnh\\n ZIP": "Extract PDF to Images\\n ZIP",
+  "Trợ Lý Dự Toán Lợi Nhuận Sàn & Thuế TMĐT (2025 - 2026)": "Marketplace Profit & E-commerce Tax Estimator (2025 - 2026)",
+  "TÁCH NỀN ẢNH 1 CHẠM 100% TRONG RAM — KHÔNG WATERMARK, KHÔNG GIỚI HẠN": "ONE-CLICK BACKGROUND REMOVAL 100% IN RAM — NO WATERMARK, NO LIMITS",
+  "Tách & Trích Xuất Trang PDF": "Split & Extract PDF Pages",
+  "Tách & Tải Về Máy": "Split & Download",
+  "Tách Nền Ảnh (PNG Trong Suốt)": "Remove Image Background (Transparent PNG)",
+  "Tách riêng các trang cần lấy (VD: 1-3, 5)": "Extract specific pages (e.g., 1-3, 5)",
+  "TẠI SAO ẢNH IPHONE (.HEIC) KHÔNG MỞ ĐƯỢC TRÊN MÁY TÍNH VÀ SHOPPE/TIKTOK?": "WHY WON'T IPHONE (.HEIC) PHOTOS OPEN ON COMPUTERS AND SHOPEE/TIKTOK?",
+  "Tại Sao Bạn Cần Nén Ảnh? Tính Năng Này Giúp Gì Cho Bạn?": "Why Do You Need Image Compression? How Does This Feature Help You?",
+  "Tải 1 File XML Mẫu": "Download a Sample XML File",
+  "Tải Lên Hóa Đơn XML (Đơn Lẻ hoặc Hàng Loạt)": "Upload XML Invoices (Single or Batch)",
+  "Tải PNG Trong Suốt (Full HD)": "Download Transparent PNG (Full HD)",
+  "Tải Ảnh Chữ Ký": "Download Signature Image",
+  "Tải Ảnh Đã Nén Về Máy": "Download Compressed Images",
+  "Tất Cả (12 Công Cụ)": "All (12 Tools)",
+  "TỔNG TIỀN THANH TOÁN:": "TOTAL PAYMENT:",
+  "Tổng Số Hóa Đơn": "Total Invoices",
+  "Tổng Thanh Toán": "Total Payment",
+  "Tổng tiền chưa thuế:": "Subtotal (excl. tax):",
+  "Tự động nhận diện dòng/cột & xuất file .xlsx sạch sẽ": "Auto-detect rows/columns & export a clean .xlsx file",
+  "Tỷ lệ hoàn trả / hủy hàng dự kiến của shop:": "Shop's expected return / cancellation rate:",
+  "VD: 1-3, 5 hoặc 2, 4": "e.g., 1-3, 5 or 2, 4",
+  "Vui lòng kéo thả các file .XML vào khung bên trái hoặc bấm vào nút \\\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\\\" ở góc trên.": "Please drag & drop .XML files into the left panel, or click the \\\"⚡ Try 5 Sample Invoices Statement\\\" button in the top corner.",
+  "Vẽ Tay": "Draw by Hand",
+  "Vẽ chữ ký tay hoặc chèn ảnh chữ ký trong suốt": "Draw a handwritten signature or insert a transparent signature image",
+  "Xem 1 Hóa Đơn Mẫu": "View a Sample Invoice",
+  "Xem thumbnail từng trang, bỏ trang thừa": "Preview page thumbnails, remove extra pages",
+  "Xem trước số liệu": "Preview figures",
+  "Xoay & Lưu Về Máy": "Rotate & Download",
+  "Xoay Chiều Trang PDF": "Rotate PDF Pages",
+  "Xuất Bảng Kê Excel": "Export Excel Statement",
+  "Xuất Bảng Kê Excel (.xlsx)": "Export Excel Statement (.xlsx)",
+  "Xuất Excel (.xlsx)": "Export Excel (.xlsx)",
+  "Xuất File PDF Mới": "Export New PDF File",
+  "Xuất Thành File PDF (Khổ A4)": "Export as PDF File (A4 Size)",
+  "Xuất từng trang thành JPG/PNG nét cao": "Export each page as high-resolution JPG/PNG",
+  "Xóa": "Delete",
+  "Xóa & Đổi Thứ Tự Trang\\n HOT": "Delete & Reorder Pages\\n HOT",
+  "Xóa Hết": "Clear All",
+  "Xóa Lịch Sử & Dọn Sạch RAM": "Clear History & Wipe RAM",
+  "Xóa Sạch Lịch Sử Khi Xong": "Clear History When Done",
+  "Xóa tất cả": "Delete all",
+  "Xóa vẽ lại": "Clear and redraw",
+  "Xử Lý Ảnh Chuyên Nghiệp: Đổi Ảnh HEIC (iPhone) & Nén Ảnh": "Professional Image Processing: Convert HEIC (iPhone) Photos & Compress Images",
+  "ZIP": "ZIP",
+  "ZenTool": "ZenTool",
+  "ZenTool Suite": "ZenTool Suite",
+  "Đang giải mã ảnh HEIC trong RAM...": "Decoding HEIC images in RAM...",
+  "Đang tính toán phân tích chỉ số...": "Calculating and analyzing metrics...",
+  "Đang tải thông tin ngành hàng...": "Loading category information...",
+  "Đã chuyển đổi thành công: 0 ảnh": "Successfully converted: 0 images",
+  "Đã chọn 0 tệp PDF:": "Selected 0 PDF files:",
+  "Đã chọn 0 ảnh:": "Selected 0 images:",
+  "Đã nạp: 0 file": "Loaded: 0 files",
+  "Đóng Chữ Ký & Lưu Hợp Đồng": "Apply Signature & Save Contract",
+  "Đóng Dấu & Tải Về Máy": "Stamp & Download",
+  "Đóng Dấu Bản Quyền (Watermark)": "Add Copyright Watermark",
+  "Địa chỉ: ...": "Address: ...",
+  "Định Dạng Xuất Ra:": "Output Format:",
+  "Định Dạng Đầu Ra:": "Output Format:",
+  "Đọc & Gom Bảng Kê Hóa Đơn Điện Tử XML Hàng Loạt": "Read & Aggregate Batch XML E-Invoice Statements",
+  "Đọc & Gom Hóa Đơn XML": "Parse & Merge XML Invoices",
+  "Đọc Hóa Đơn XML": "Read XML Invoices",
+  "Đổi Ảnh HEIC & Nén Ảnh": "Photo Studio & HEIC Converter",
+  "Đổi Ảnh HEIC (iPhone)": "Convert iPhone HEIC",
+  "Độ nhạy xóa màu (Tolerance):": "Color removal sensitivity (Tolerance):",
+  "• 1-Click xuất ra file Excel chuẩn để kê khai thuế.": "• 1-Click export to a standard Excel file for tax declaration.",
+  "• Bấm \\\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\\\" để trải nghiệm bảng kê kế toán mẫu tức thì.": "• Click \\\"⚡ Try 5 Sample Invoices Statement\\\" to instantly experience a sample accounting statement.",
+  "• Kéo thả 1 hoặc nhiều file XML vào ô trên để bóc tách ngay.": "• Drag & drop one or more XML files into the box above to extract immediately.",
+  "⚡ Sửa Lỗi Font Ngay": "⚡ Fix Font Errors Now",
+  "⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu": "⚡ Try 5 Sample Invoices Statement",
+  "⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu": "⚡ Try Sample Image Conversion",
+  "✓ Tự động lọc nền trắng thành trong suốt": "✓ Automatically filter white background to transparent",
+  "💡 Hướng dẫn nhanh:": "💡 Quick guide:",
+  "💡 Nền caro biểu thị vùng trong suốt. Khi chèn lên web hoặc sàn Shopee/TikTok, nền sẽ tự động hòa vào ảnh nền đích.": "💡 The checkerboard indicates transparent areas. When placed on a website or Shopee/TikTok, the background automatically blends into the target background.",
+  "📑 Ghép & Xử Lý Trang (4)": "📑 Pages & Merge (4)",
+  "📦 Tải Toàn Bộ (File ZIP)": "📦 Download All (ZIP File)",
+  "🔄 Chuyển Đổi & Nén (4)": "🔄 Convert & Compress (4)",
+  "🔒 Ký Tên & Bảo Mật (4)": "🔒 Sign & Protect (4)",
+  "Tiếng Việt": "Vietnamese",
+  "English": "English",
+  "Deutsch": "German",
+  "Tách Nền Ảnh 1 Chạm": "1-Touch Background Remover",
+  "Tách Nền Ảnh (PNG)": "Background Remover (PNG)",
+  "Xem Trước Bảng": "Table Preview",
+  "Đang xử lý...": "Processing...",
+  "Thành công!": "Success!",
+  "Đã sao chép!": "Copied to clipboard!",
+  "Báo cáo lợi nhuận": "Profit Report",
+  "Xem chi tiết": "View Details",
+  "Đóng": "Close",
+  "In Bảng Kê": "Print Statement",
+  "Xuất Excel Bảng Kê": "Export Invoices to Excel",
+  "Tải Về": "Download",
+  "Làm lại": "Reset",
+  "\"Ảnh chụp từ điện thoại nét căng thì cứ để nguyên đăng lên, tại sao phải nén làm gì?\"": "\"Phone photos are already razor-sharp, so why bother compressing them before uploading?\"",
+  "\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\"": "\"⚡ Try the 5-Invoice Sample Statement\"",
+  "\"⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu\"": "\"⚡ Try the Sample Image Conversion\"",
+  "-0 đ": "-0 VND",
+  ". Chúng tôi không lưu trữ, không sao chép, và không có máy chủ trung gian nào có thể xem được số liệu kinh doanh của bạn.": ". We do not store, do not copy, and have no intermediary server that can see your business data.",
+  ". Dung lượng quá nặng này chính là thủ phạm gây ra 4 rắc rối lớn hàng ngày:": ". This excessive file size is the culprit behind 4 major daily headaches:",
+  ". Thực tế, một bức ảnh chụp điện thoại thường nặng từ": ". In reality, a phone photo typically weighs between",
+  ". Xử lý 100% tại trình duyệt máy tính của bạn, không upload ảnh lên mạng, không yêu cầu đăng ký hay thẻ tín dụng.": ". Processed 100% in your computer's browser, no image upload to the internet, no sign-up or credit card required.",
+  ". ZenTool giúp bạn chuyển đổi hàng loạt sang": ". ZenTool lets you batch-convert to",
+  ".HEIC": ".HEIC",
+  "5MB đến 15MB": "5MB to 15MB",
+  "70% — Tối Ưu Dung Lượng (Cực nhẹ cho gửi mail)": "70% — Size Optimized (Ultra-light for email)",
+  "80% — Tiêu Chuẩn Vàng (Đẹp & Giảm 70% dung lượng)": "80% — Golden Standard (Great quality & 70% smaller)",
+  "90% — Cực Kỳ Sắc Nét (Gần như không nén)": "90% — Ultra Sharp (Almost no compression)",
+  "Bấm \"Xem\" để mở bản in chi tiết từng hóa đơn": "Click \"View\" to open the detailed printout of each invoice",
+  "Bấm \"Xóa\" trên trang để loại bỏ hoặc mũi tên để dời vị trí:": "Click \"Delete\" on a page to remove it, or the arrows to reorder:",
+  "Chuẩn JPEG / JPG (Khuyên Dùng - Tương thích 100% mọi nơi)": "JPEG / JPG Standard (Recommended - 100% compatible everywhere)",
+  "Chuẩn JPEG / JPG Tiêu Chuẩn": "Standard JPEG / JPG",
+  "Chuẩn PNG (Giữ chi tiết nguyên bản chất lượng cao)": "PNG Standard (Preserves original high-quality detail)",
+  "Chuẩn WebP (Siêu nhẹ cho Website & Đăng sàn)": "WebP Standard (Ultra-light for websites & marketplace listings)",
+  "Chuẩn WebP Thế Hệ Mới (Siêu Nhẹ - Khuyên Dùng)": "Next-Gen WebP Standard (Ultra-Light - Recommended)",
+  "Chẩn Đoán Của Trợ Lý:": "Assistant's Diagnosis:",
+  "Chọn các ảnh từ iPhone (.heic) kéo vào khung bên trái, hoặc bấm": "Select photos from your iPhone (.heic) and drag them into the left panel, or click",
+  "Các sàn thương mại điện tử yêu cầu ảnh tải lên phải dưới 1MB - 2MB. Ảnh nén sang chuẩn": "E-commerce marketplaces require uploaded images to be under 1MB - 2MB. Images compressed to",
+  "Giải pháp thay thế hoàn hảo cho Remove.bg và Canva Pro: Tách phông nền trắng/màu đơn sắc của ảnh sản phẩm, ảnh chụp chân dung và xuất thẳng file": "The perfect alternative to Remove.bg and Canva Pro: remove white/solid-color backgrounds from product and portrait photos and export directly as",
+  "Gộp, tách, nén, mở khóa sao kê ngân hàng, ký hợp đồng, xóa/đổi thứ tự trang, và cứu lỗi font chữ. 100% Client-Side trong RAM, bảo mật tuyệt đối!": "Merge, split, compress, unlock bank statements, sign contracts, delete/reorder pages, and fix font errors. 100% client-side in RAM, absolutely secure!",
+  "Hiển thị": "Display",
+  "Hòm thư Gmail hay Outlook thường giới hạn file đính kèm dưới 25MB. Đính kèm 3 bức ảnh gốc là hòm thư báo lỗi không gửi được. Nén ảnh giúp bạn gửi cả chục ảnh nhẹ nhàng.": "Gmail or Outlook inboxes usually limit attachments to under 25MB. Attaching 3 original photos makes the inbox report a send error. Compressing images lets you send a dozen photos with ease.",
+  "JPG / PNG chuẩn quốc tế": "International-standard JPG / PNG",
+  "Khách hàng lướt web trên điện thoại nếu ảnh load quá 3 giây họ sẽ tắt ngay lập tức. Nén ảnh giúp trang web mở ra trong tích tắc, giữ chân khách mua hàng.": "If images take more than 3 seconds to load on mobile, customers leave immediately. Compressing images makes your site open in a flash, keeping shoppers engaged.",
+  "Kéo thả 50 - 100 file XML cùng lúc để bóc tách thông tin và tự động xuất ra Bảng Kê Excel (.xlsx) chuẩn thuế. 100% trong RAM máy tính.": "Drag and drop 50 - 100 XML files at once to extract data and automatically export a tax-compliant Excel Statement (.xlsx). 100% in your computer's RAM.",
+  "Ký Hiệu": "Series",
+  "Ký Tên Lên Hợp Đồng PDF": "Sign PDF Contracts",
+  "Ký hiệu:": "Series:",
+  "LƯU Ý MIỄN TRỪ TRÁCH NHIỆM PHÁP LÝ:": "LEGAL DISCLAIMER:",
+  "Lưu trữ 1.000 ảnh gốc tốn 10GB dung lượng máy. Sau khi nén chỉ còn chưa tới 1.5GB, không bao giờ phải lo máy tính bị báo đầy bộ nhớ.": "Storing 1,000 original photos takes up 10GB of disk space. After compression it's under 1.5GB, so you never have to worry about your computer reporting low memory.",
+  "MST Bán": "Seller Tax ID",
+  "Mã số thuế:": "Tax ID:",
+  "Mọi công thức và số liệu tính toán tại ZenTool chỉ mang tính chất": "All formulas and calculations in ZenTool are for",
+  "Mọi file hóa đơn XML, chứng từ hợp đồng đều được": "All XML invoice files and contract documents are",
+  "Mở Khóa Mật Khẩu PDF": "Unlock PDF Password",
+  "Ngày Lập": "Issue Date",
+  "Ngày lập:": "Issue date:",
+  "Người mua:": "Buyer:",
+  "Nhiều người thắc mắc:": "Many people wonder:",
+  "Nhật Ký Phiên Làm Việc": "Session Log",
+  "Nén Cực Nhẹ (Giảm 75% - 85% cho gửi mail gấp)": "Ultra Light (75% - 85% smaller for urgent email)",
+  "Nén Dung Lượng PDF": "Compress PDF Size",
+  "Nén Giữ Nét Cao (Giảm 30% - 40% cho in ấn)": "High-Quality Compression (30% - 40% smaller for printing)",
+  "PNG trong suốt Full HD": "Full HD Transparent PNG",
+  "Phân bổ chính xác theo từng ngành hàng cụ thể, khấu trừ phí thanh toán (6%), phí hạ tầng (3k), phí ngành, chi phí hoàn hủy và thuế TNCN/GTGT.": "Accurately allocated by specific product category, deducting payment fees (6%), infrastructure fees (3k), category fees, return/cancellation costs, and PIT/VAT.",
+  "STT": "No.",
+  "Siêu nét (2.0x)": "Ultra Sharp (2.0x)",
+  "Số HĐ": "Inv No.",
+  "Số Lượng": "Quantity",
+  "Số tiền viết bằng chữ:": "Amount in words:",
+  "Số tài khoản:": "Account number:",
+  "Số:": "No.:",
+  "Thao Tác": "Actions",
+  "Thuế Suất": "Tax Rate",
+  "Thuế VAT": "VAT",
+  "Thành Tiền": "Total Amount",
+  "Tiêu Chuẩn (Giảm 50% - 70%, giữ chữ rõ nét)": "Standard (50% - 70% smaller, keeps text crisp)",
+  "Tiền Hàng": "Goods Amount",
+  "Tiền tệ:": "Currency:",
+  "Trang 1": "Page 1",
+  "Trang cuối cùng (Khuyên Dùng)": "Last page (Recommended)",
+  "Trích Xuất PDF Sang Ảnh": "Extract PDF to Images",
+  "Tên Hàng Hóa, Dịch Vụ": "Goods/Service Name",
+  "VND": "VND",
+  "Vui lòng kéo thả các file .XML vào khung bên trái hoặc bấm vào nút": "Please drag and drop the .XML files into the left panel or click the button",
+  "WebP": "WebP",
+  "Xoay Ngược 180 Độ (Lộn ngược đầu)": "Rotate 180 Degrees (Upside down)",
+  "Xoay Phải 90 Độ (Thuận chiều kim đồng hồ)": "Rotate Right 90 Degrees (Clockwise)",
+  "Xoay Trái 270 Độ (Ngược chiều kim đồng hồ)": "Rotate Left 270 Degrees (Counterclockwise)",
+  "Xóa & Đổi Thứ Tự Trang": "Delete & Reorder Pages",
+  "ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận Bán Hàng 100% Client-Side": "ZenTool Suite — 100% Client-Side Office Utilities & Sales Profit Assistant",
+  "Zero Server Upload": "Zero Server Upload",
+  "báo lỗi không hỗ trợ định dạng này": "reports that this format is not supported",
+  "dự toán kinh doanh giả định và tham khảo": "hypothetical business estimates and reference only",
+  "dựa trên biểu phí công bố công khai của các sàn và biểu thuế hiện hành. Đây không phải là cam kết kế toán hay văn bản pháp lý thay thế cho quyết toán chính thức từ Cơ quan Thuế hoặc báo cáo tài chính Kênh Người Bán của sàn. Nhà bán hàng tự chịu trách nhiệm với chiến lược giá và nghĩa vụ thuế thực tế của mình.": "based on publicly disclosed marketplace fee schedules and current tax tables. This is not an accounting commitment or a legal document replacing official settlement from the Tax Authority or the marketplace's Seller Channel financial reports. Sellers are responsible for their own pricing strategy and actual tax obligations.",
+  "file": "file",
+  "giữ nguyên độ sắc nét nhưng dung lượng giảm tới 80%, sàn duyệt ngay lập tức.": "preserves sharpness while reducing size by up to 80%, and the marketplace approves it instantly.",
+  "hóa đơn": "invoice",
+  "iPhone từ iOS 11 mặc định lưu ảnh dưới định dạng": "iPhones from iOS 11 onward save photos by default in",
+  "siêu nét chỉ trong 2 giây, không tải ảnh lên bất kỳ máy chủ nào!": "ultra-sharp in just 2 seconds, without uploading images to any server!",
+  "tệp PDF:": "PDF file:",
+  "xử lý trực tiếp trong bộ nhớ RAM trình duyệt máy tính của bạn": "processed directly in your computer browser's RAM",
+  "ĐVT": "Unit",
+  "Đã chuyển đổi thành công:": "Successfully converted:",
+  "Đã chọn": "Selected",
+  "Đã ký số điện tử": "Electronically signed",
+  "Đã nạp:": "Loaded:",
+  "Đơn Giá": "Unit Price",
+  "Đơn Vị Bán Hàng": "Seller",
+  "Đơn Vị Bán Hàng:": "Seller:",
+  "Đơn Vị Mua Hàng:": "Buyer:",
+  "Địa chỉ:": "Address:",
+  "Độ nét cao (1.5x)": "High Sharpness (1.5x)",
+  "để tiết kiệm bộ nhớ. Nhưng máy tính Windows cũ, Zalo trên PC, phần mềm kế toán và các sàn Shopee/TikTok thường": "to save storage. But older Windows computers, Zalo on PC, accounting software, and Shopee/TikTok marketplaces often",
+  "để trải nghiệm bảng kê kế toán mẫu tức thì.": "to experience the sample accounting statement instantly.",
+  "để trải nghiệm.": "to try it.",
+  "Ảnh JPG": "JPG Image",
+  "Ảnh PNG": "PNG Image",
+  "ảnh": "image",
+  "ảnh:": "image:",
+  "ở góc trên.": "in the top corner.",
+  "• Bấm": "• Click",
+  "🇩🇪 DE": "🇩🇪 DE",
+  "🇬🇧 EN": "🇬🇧 EN",
+  "🇻🇳 VI": "🇻🇳 VI"
+},
   de: {
-    // Header & Meta
-    'app.title': 'ZenTool Suite — 100% Client-Seitige Büro- & E-Commerce Suite',
-    'header.security': '100% Lokale Privatsphäre Im RAM',
-    'header.slogan': '100% Kostenlos • Keine Server-Speicherung • Kein Paywall',
-    'btn.share': 'Teilen',
-
-    // Main Navigation
-    'nav.invoice': 'XML-Rechnungen Einlesen',
-    'nav.files': 'PDF-Tools & Büro-Werkzeuge',
-    'nav.profit': 'Marktplatz-Gewinn & Steuern 2026',
-    'nav.media': 'Fotostudio & HEIC-Konverter',
-    'nav.invoiceShort': 'XML-Rechnungen',
-    'nav.filesShort': 'PDF-Tools',
-    'nav.profitShort': 'Gewinn & Steuern',
-    'nav.mediaShort': 'Fotostudio',
-
-    // Tab 2 Filters
-    'filter.all': 'Alle (12 Werkzeuge)',
-    'filter.pages': '📑 Seiten & Zusammenführen (4)',
-    'filter.convert': '🔄 Konvertieren & Komprimieren (4)',
-    'filter.security': '🔒 Signieren & Schützen (4)',
-
-    // Tool 12: PDF Table Extractor
-    'tool12.title': 'PDF-Tabellen Nach Excel Extrahieren',
-    'tool12.desc': 'Erkennt Zeilen/Spalten automatisch & exportiert saubere .xlsx',
-    'tool12.prompt': 'PDF mit Tabelle auswählen (Kontoauszug, Bericht)',
-    'tool12.hint': '100% im Browser-RAM verarbeitet, kein Server-Upload',
-    'tool12.btnExport': 'Nach Excel (.xlsx) Exportieren',
-    'tool12.btnSample': 'Muster',
-    'tool12.preview': 'Daten-Vorschau',
-
-    // Tab 4: Sub-tabs
-    'media.subtab.heic': 'iPhone HEIC Konvertieren',
-    'media.subtab.compress': 'WebP Komprimieren',
-    'media.subtab.bgremove': '1-Klick Hintergrund Entfernen (PNG)',
-
-    // Background Remover
-    'bgremove.bannerTitle': '1-KLICK HINTERGRUND ENTFERNER IM RAM — OHNE WASSERZEICHEN, UNBEGRENZT',
-    'bgremove.bannerDesc': 'Kostenlose Alternative zu Remove.bg & Canva Pro: Entfernen Sie weiße oder einfarbige Hintergründe von Produktfotos und Porträts und exportieren Sie transparente Full-HD-PNGs direkt im Browser. 100% lokal, keine Anmeldung, keine Kreditkarte nötig.',
-    'bgremove.uploadPrompt': 'Bild hier ablegen oder anklicken zum Entfernen',
-    'bgremove.uploadHint': 'Unterstützt JPG, PNG, WebP (Produkte, Logos, Porträts)',
-    'bgremove.toleranceLabel': 'Farbtoleranz (Tolerance):',
-    'bgremove.toleranceHint': 'Erhöhen, wenn Farbreste bleiben; verringern, wenn Produktdetails abgeschnitten werden.',
-    'bgremove.featherLabel': 'Kanten-Glättung (Feathering):',
-    'bgremove.colorLabel': 'Erkannte Hintergrundfarbe',
-    'bgremove.eyedropperBtn': 'Farbe Auf Bild Picken',
-    'bgremove.btnDownload': 'Transparentes PNG Herunterladen (Full HD)',
-    'bgremove.btnSample': 'Beispielprodukt (1-Klick)',
-    'bgremove.previewTitle': 'Echtzeit-Vorschau Mit Transparenz',
-    'bgremove.canvasHint': '💡 Das Karomuster stellt Transparenz dar. Beim Einfügen in Online-Shops passt sich das Produkt perfekt ein.'
-  }
+  "(Bạn hoàn toàn có thể rút dây mạng hoặc ngắt Wifi mà trang web vẫn đọc hóa đơn bình thường 100%)": "(Sie können das Netzwerkkabel vollständig abziehen oder das WLAN ausschalten, und die Website liest Rechnungen trotzdem normal zu 100 % aus)",
+  "(Ký điện tử hợp lệ bởi Doanh nghiệp)": "(Elektronisch signiert und gültig gemäß dem Unternehmen)",
+  "(Ký, ghi rõ họ tên)": "(Unterschreiben und vollständigen Namen deutlich angeben)",
+  "...": "...",
+  "0 VND": "0 VND",
+  "0 dòng • 0 cột": "0 Zeilen • 0 Spalten",
+  "0 đ": "0 VND",
+  "1. Sàn Giao Dịch:": "1. Marktplatz:",
+  "1. Tăng Tốc Độ Mở Trang Web Gấp 5 Lần": "1. Website-Ladezeit um das 5-Fache beschleunigen",
+  "1.5% Doanh Thu": "1,5 % des Umsatzes",
+  "100% RAM": "100 % RAM",
+  "100% Riêng Tư Tại Máy Bạn": "100% Lokale Privatsphäre Im RAM",
+  "100% trong RAM trình duyệt, không tải lên server": "100 % im Browser-RAM, kein Upload auf einen Server",
+  "12%": "12 %",
+  "2. Chọn Ngành Hàng Sản Phẩm:": "2. Produktkategorie auswählen:",
+  "2. Gửi Email Không Bị Báo Lỗi Vượt 25MB": "2. E-Mails ohne Fehlermeldung bei Überschreitung von 25 MB senden",
+  "3. Đăng Bán Trên Shopee & TikTok Shop Không Bị Từ Chối": "3. Auf Shopee & TikTok Shop ohne Ablehnung verkaufen",
+  "35%": "35 %",
+  "4. Tiết Kiệm Dung Lượng Ổ Cứng & Google Drive": "4. Speicherplatz auf Festplatte & Google Drive sparen",
+  "80%": "80 %",
+  "80% là mức vàng: Dung lượng giảm 75% mà mắt thường không thấy khác biệt.": "80 % ist der Goldstandard: Die Dateigröße sinkt um 75 %, ohne dass das bloße Auge einen Unterschied erkennt.",
+  "Bao Bì Đóng Gói (đ):": "Verpackungskosten (VND):",
+  "Biên lãi: 0%": "Gewinnmarge: 0 %",
+  "Bóc Tách Bảng PDF Sang Excel": "PDF-Tabellen nach Excel extrahieren",
+  "Bấm \\\"Xem\\\" để mở bản in chi tiết từng hóa đơn": "Klicken Sie auf \\\"Anzeigen\\\", um den detaillierten Ausdruck jeder Rechnung zu öffnen",
+  "Bấm \\\"Xóa\\\" trên trang để loại bỏ hoặc mũi tên để dời vị trí:": "Klicken Sie auf einer Seite auf \\\"Löschen\\\", um sie zu entfernen, oder auf die Pfeile, um sie zu verschieben:",
+  "Bộ Siêu Tiện Ích PDF Văn Phòng Toàn Năng (11 Trong 1)": "All-in-One-Office-PDF-Super-Toolkit (11 in 1)",
+  "CAM KẾT BẢO MẬT 100%: DỮ LIỆU CỦA BẠN KHÔNG BAO GIỜ TẢI LÊN MÁY CHỦ": "100 % DATENSCHUTZGARANTIE: IHRE DATEN WERDEN NIEMALS AUF EINEN SERVER HOCHGELADEN",
+  "Cam kết 100% trong RAM: Mật khẩu và số dư không bao giờ gửi lên mạng.": "100 % RAM-Garantie: Passwörter und Kontostände werden niemals über das Netzwerk gesendet.",
+  "Cam kết bảo mật 100% Client-Side • Hoàn toàn Miễn phí": "100 % Client-Side-Datenschutzgarantie • Vollständig kostenlos",
+  "Chi Tiết Khấu Trừ Thực Tế:": "Tatsächliche Abzüge im Detail:",
+  "Chi phí Ads, Đóng gói & Affiliate:": "Werbe-, Verpackungs- & Affiliate-Kosten:",
+  "Chia sẻ": "Teilen",
+  "Chuyển văn bản TCVN3 (.VNTime) sang Unicode chuẩn": "TCVN3-Text (.VNTime) in Standard-Unicode umwandeln",
+  "Chuyển đổi hàng loạt ảnh .HEIC từ iPhone sang JPG/PNG trong 2 giây & nén WebP siêu nhẹ. 100% trong RAM máy tính.": "iPhone-.HEIC-Fotos in 2 Sekunden stapelweise in JPG/PNG umwandeln & zu ultraleichtem WebP komprimieren. 100 % im RAM Ihres Computers.",
+  "Chưa chọn ảnh": "Keine Bilder ausgewählt",
+  "Chưa có hóa đơn nào được tải": "Es wurden noch keine Rechnungen geladen",
+  "Chưa có thao tác nào trong phiên này. Mọi thao tác xong sẽ hiển thị tại đây để anh dễ theo dõi.": "In dieser Sitzung wurden noch keine Aktionen ausgeführt. Abgeschlossene Aktionen werden hier angezeigt, damit Sie sie leicht nachverfolgen können.",
+  "Chưa có ảnh": "Noch keine Bilder",
+  "Chưa có ảnh HEIC nào được chuyển đổi": "Es wurden noch keine HEIC-Bilder umgewandelt",
+  "Chấm màu trên ảnh": "Farbe aus Bild aufnehmen",
+  "Chất Lượng Xuất Ảnh:": "Bildexportqualität:",
+  "Chất lượng nén:": "Komprimierungsqualität:",
+  "Chế độ nén:": "Komprimierungsmodus:",
+  "Chọn 1 file PDF để tách": "1 PDF-Datei zum Teilen auswählen",
+  "Chọn PDF chứa bảng biểu (Sao kê, Báo cáo)": "PDF mit Tabellen auswählen (Kontoauszüge, Berichte)",
+  "Chọn các file PDF để gộp": "PDF-Dateien zum Zusammenführen auswählen",
+  "Chọn các ảnh từ iPhone (.heic) kéo vào khung bên trái, hoặc bấm \\\"⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu\\\" để trải nghiệm.": "Ziehen Sie iPhone-Fotos (.heic) in den linken Bereich oder klicken Sie auf \\\"⚡ Beispielbildumwandlung testen\\\", um es auszuprobieren.",
+  "Chọn file Hợp Đồng PDF để ký": "PDF-Vertragsdatei zum Unterschreiben auswählen",
+  "Chọn file PDF sao kê bị khóa": "Gesperrte PDF-Kontoauszugsdatei auswählen",
+  "Chọn file PDF để lấy ảnh": "PDF-Datei zum Extrahieren von Bildern auswählen",
+  "Chọn file PDF để nén": "PDF-Datei zum Komprimieren auswählen",
+  "Chọn file PDF để xoay": "PDF-Datei zum Drehen auswählen",
+  "Chọn file PDF để xếp trang": "PDF-Datei zum Anordnen der Seiten auswählen",
+  "Chọn file PDF để đóng dấu": "PDF-Datei zum Stempeln auswählen",
+  "Chọn hoặc kéo thả ảnh cần tách nền vào đây": "Wählen Sie das Bild, dessen Hintergrund entfernt werden soll, aus oder ziehen Sie es hierher",
+  "Chọn nhiều ảnh (JPG, PNG)": "Mehrere Bilder auswählen (JPG, PNG)",
+  "Chờ nén...": "Komprimierung läuft...",
+  "Chữ Ký Số Hợp Lệ": "Gültige digitale Signatur",
+  "Copy": "Kopieren",
+  "Cứu Lỗi Font Tiếng Việt": "Vietnamesische Schriftfehler beheben",
+  "Doanh thu bán ra (Giá cho khách):": "Verkaufserlös (Kundenpreis):",
+  "Dán văn bản bị lỗi font chữ ô vuông/loạn mã vào đây...": "Fügen Sie hier Text mit Kästchen-/Zeichensalat-Schriftfehlern ein...",
+  "Dùng chuột hoặc ngón tay để vẽ chữ ký": "Zeichnen Sie Ihre Unterschrift mit der Maus oder dem Finger",
+  "Dữ liệu chỉ tồn tại tạm thời trong RAM máy tính. Khi bấm xóa, toàn bộ dấu vết sẽ biến mất vĩnh viễn.": "Die Daten existieren nur vorübergehend im RAM Ihres Computers. Wenn Sie auf Löschen klicken, verschwinden alle Spuren dauerhaft.",
+  "Ghép File & Tiện Ích": "PDF-Tools",
+  "Ghép File & Tiện Ích Văn Phòng": "PDF-Tools & Büro-Werkzeuge",
+  "Ghép Ảnh Thành File PDF": "Bilder zu einer PDF-Datei zusammenführen",
+  "Ghép ảnh chụp CCCD, bằng lái, hợp đồng thành 1 PDF": "Fotos von Personalausweisen, Führerscheinen und Verträgen zu 1 PDF zusammenführen",
+  "Giá Bán Cho Khách (VND):": "Verkaufspreis für Kunden (VND):",
+  "Giá Nhập / Giá Vốn (VND):": "Einkaufspreis / Einstandspreis (VND):",
+  "Giá vốn sản phẩm (COGS):": "Produktkosten (COGS):",
+  "Giảm nhẹ dung lượng để gửi mail & lưu trữ": "Dateigröße leicht reduzieren für E-Mail-Versand & Archivierung",
+  "Gói Dịch Vụ Sàn Tùy Chọn:": "Optionale Marktplatz-Servicepakete:",
+  "Gói Freeship Xtra (Shopee 6% / TikTok 5.5%)": "Freeship-Xtra-Paket (Shopee 6 % / TikTok 5,5 %)",
+  "Gói Voucher Xtra (4%)": "Voucher-Xtra-Paket (4 %)",
+  "Gộp & Lưu Về Máy Ngay": "Jetzt zusammenführen & auf Gerät speichern",
+  "Gộp Nhiều File PDF": "Mehrere PDF-Dateien zusammenführen",
+  "Gỡ pass sao kê VCB, MB, Techcombank, lương": "Passwort von VCB-, MB-, Techcombank- und Gehalts-Kontoauszügen entfernen",
+  "HOT": "HOT",
+  "Hao hụt hoàn hàng & vận chuyển chiều về:": "Rücksende- & Rückversandverlust:",
+  "Hiển thị 0 hóa đơn": "0 Rechnungen werden angezeigt",
+  "Hoa Hồng Affiliate (%):": "Affiliate-Provision (%):",
+  "HÓA ĐƠN GIÁ TRỊ GIA TĂNG": "MEHRWERTSTEUER-RECHNUNG",
+  "Hóa Đơn XML": "XML-Rechnungen",
+  "Hỗ trợ JPG, PNG, WEBP dung lượng tối đa 25MB": "Unterstützt JPG, PNG, WEBP bis zu 25 MB",
+  "Hỗ trợ JPG, PNG, WebP (Ảnh sản phẩm, logo, chân dung)": "Unterstützt JPG, PNG, WebP (Produktfotos, Logos, Porträts)",
+  "Hỗ trợ chọn 50 - 100 ảnh iPhone cùng lúc": "Unterstützt die gleichzeitige Auswahl von 50 - 100 iPhone-Fotos",
+  "Hỗ trợ chọn nhiều file cùng lúc (hoặc 1 file đơn)": "Unterstützt die gleichzeitige Auswahl mehrerer Dateien (oder einer einzelnen Datei)",
+  "In Hóa Đơn / Lưu PDF": "Rechnung drucken / als PDF speichern",
+  "Khấu trừ Thuế TNCN (0.5%) & Thuế GTGT (1%) cho hộ kinh doanh cá nhân": "Abzug der Einkommensteuer (0,5 %) & Mehrwertsteuer (1 %) für Einzelunternehmen",
+  "Kéo thả các file .HEIC vào đây": ".HEIC-Dateien hierher ziehen",
+  "Kéo thả các file .XML vào đây": ".XML-Dateien hierher ziehen",
+  "Kéo thả ảnh vào đây để nén": "Bilder hierher ziehen, um sie zu komprimieren",
+  "Kéo tăng nếu còn sót viền nền; kéo giảm nếu bị ăn lẹm vào chi tiết sản phẩm.": "Erhöhen, wenn Hintergrundränder übrig bleiben; verringern, wenn Produktdetails angeschnitten werden.",
+  "Ký Tên Lên Hợp Đồng PDF\\n TIỆN ÍCH": "PDF-Verträge unterschreiben\\n DIENSTPROGRAMM",
+  "Ký hiệu: ...": "Zeichen: ...",
+  "Ký vào trang:": "Auf Seite unterschreiben:",
+  "Kết Quả Trong Suốt Thời Gian Thực": "Ergebnisse in Echtzeit",
+  "Kết quả tiếng Việt chuẩn Unicode sẽ hiện ở đây...": "Das Ergebnis in Standard-Unicode-Vietnamesisch erscheint hier...",
+  "Làm mịn & Khử răng cưa (Feathering):": "Glättung & Kantenglättung (Feathering):",
+  "Lãi Sàn & Thuế": "Gewinn & Steuern",
+  "Lọc theo Tên người bán, MST, Số hóa đơn...": "Nach Verkäufername, Steuernummer, Rechnungsnummer filtern...",
+  "Lợi Nhuận Ròng / Đơn:": "Nettogewinn / Bestellung:",
+  "Lợi Nhuận Sàn": "Marktplatzgewinn",
+  "Lợi Nhuận Sàn & Thuế 2026": "Marktplatz-Gewinn & Steuern 2026",
+  "Miễn Phí 100% • Không Thu Phí • Không Lưu Trữ Dữ Liệu Lên Server": "100% Kostenlos • Keine Server-Speicherung • Kein Paywall",
+  "Màu nền nhận diện": "Markenhintergrundfarbe",
+  "Mã số thuế: ...": "Steuernummer: ...",
+  "Mẫu": "Muster",
+  "Mở Khóa & Lưu File PDF Sạch": "Entsperren & saubere PDF-Datei speichern",
+  "Mở Khóa Mật Khẩu PDF\\n 100% RAM": "PDF-Passwort entsperren\\n 100 % RAM",
+  "Nghĩa vụ Thuế TMĐT (1.5% DT):": "E-Commerce-Steuerpflicht (1,5 % des Umsatzes):",
+  "Ngày lập: ...": "Ausstellungsdatum: ...",
+  "Người Bán Hàng": "Verkäufer",
+  "Người Mua Hàng": "Käufer",
+  "Người mua: ...": "Käufer: ...",
+  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Stempeltext eingeben (z. B. KOPIE, VERTRAULICH)",
+  "Nhập mật khẩu (CCCD oder ngày sinh)...": "Passwort eingeben (Ausweisnummer oder Geburtsdatum)...",
+  "Nhật Ký Phiên Làm Việc\\n 0": "Sitzungsprotokoll\\n 0",
+  "Nén & Tải Về Máy": "Komprimieren & Herunterladen",
+  "Nén Dung Lượng PDF\\n HOT": "PDF-Größe komprimieren\\n HOT",
+  "Nén Ảnh": "Bilder komprimieren",
+  "Nén Ảnh WebP": "WebP Komprimieren",
+  "Nối nhiều file chứng từ, hợp đồng thành 1": "Mehrere Beleg- und Vertragsdateien zu einer zusammenführen",
+  "Phí cố định hoa hồng theo ngành:": "Feste Kategorie-Provision:",
+  "Phí giao dịch thanh toán & hạ tầng:": "Zahlungstransaktions- & Infrastrukturgebühren:",
+  "Phí gói Freeship Xtra & Voucher Xtra:": "Gebühren für Freeship Xtra & Voucher Xtra:",
+  "Quay Lại Bảng Kê": "Zurück zur Abrechnung",
+  "Sau khi sàn trừ hết các khoản": "Nach Abzug aller Gebühren durch den Marktplatz",
+  "Shopee": "Shopee",
+  "Studio Ảnh": "Fotostudio",
+  "Số tiền viết bằng chữ: ...": "Betrag in Worten: ...",
+  "Số tài khoản: ...": "Kontonummer: ...",
+  "Số: ...": "Nr.: ...",
+  "Sửa tài liệu scan bị ngược hoặc nằm ngang": "Gescannte Dokumente korrigieren, die kopfüber oder seitlich liegen",
+  "TIỆN ÍCH": "WERKZEUGE",
+  "Thuế TMĐT (Thông tư 40/2021/TT-BTC):": "E-Commerce-Steuer (Rundschreiben 40/2021/TT-BTC):",
+  "Thêm chữ chìm bảo vệ chứng từ chống sao chép": "Wasserzeichen zum Schutz von Dokumenten vor Kopieren hinzufügen",
+  "Thông báo": "Benachrichtigung",
+  "Thử Ảnh Mẫu (1-Click)": "Beispielbild testen (1-Klick)",
+  "TikTok Shop": "TikTok Shop",
+  "Tiền Ads/Đơn (đ):": "Werbekosten/Bestellung (VND):",
+  "Tiền Hàng (Chưa Thuế)": "Warenbetrag (ohne Steuer)",
+  "Tiền Sàn Trả Về (Payout):": "Marktplatz-Auszahlung:",
+  "Tiền Thuế GTGT": "MwSt.-Betrag",
+  "Tiền thuế GTGT:": "MwSt.-Betrag:",
+  "Tiền tệ: VND": "Währung: VND",
+  "Trích Xuất & Tải File ZIP": "Extrahieren & ZIP-Datei herunterladen",
+  "Trích Xuất PDF Sang Ảnh\\n ZIP": "PDF in Bilder extrahieren\\n ZIP",
+  "Trợ Lý Dự Toán Lợi Nhuận Sàn & Thuế TMĐT (2025 - 2026)": "Marktplatz-Gewinn- & E-Commerce-Steuer-Rechner (2025 - 2026)",
+  "TÁCH NỀN ẢNH 1 CHẠM 100% TRONG RAM — KHÔNG WATERMARK, KHÔNG GIỚI HẠN": "HINTERGRUNDENTFERNUNG MIT EINEM KLICK 100 % IM RAM — KEIN WASSERZEICHEN, KEINE LIMITS",
+  "Tách & Trích Xuất Trang PDF": "PDF-Seiten teilen & extrahieren",
+  "Tách & Tải Về Máy": "Teilen & Herunterladen",
+  "Tách Nền Ảnh (PNG Trong Suốt)": "Bildhintergrund entfernen (transparentes PNG)",
+  "Tách riêng các trang cần lấy (VD: 1-3, 5)": "Bestimmte Seiten extrahieren (z. B. 1-3, 5)",
+  "TẠI SAO ẢNH IPHONE (.HEIC) KHÔNG MỞ ĐƯỢC TRÊN MÁY TÍNH VÀ SHOPPE/TIKTOK?": "WARUM LASSEN SICH IPHONE-FOTOS (.HEIC) NICHT AUF COMPUTERN UND SHOPEE/TIKTOK ÖFFNEN?",
+  "Tại Sao Bạn Cần Nén Ảnh? Tính Năng Này Giúp Gì Cho Bạn?": "Warum brauchen Sie Bildkomprimierung? Wie hilft Ihnen diese Funktion?",
+  "Tải 1 File XML Mẫu": "Eine XML-Beispieldatei herunterladen",
+  "Tải Lên Hóa Đơn XML (Đơn Lẻ hoặc Hàng Loạt)": "XML-Rechnungen hochladen (einzeln oder im Stapel)",
+  "Tải PNG Trong Suốt (Full HD)": "Transparentes PNG herunterladen (Full HD)",
+  "Tải Ảnh Chữ Ký": "Unterschriftsbild herunterladen",
+  "Tải Ảnh Đã Nén Về Máy": "Komprimierte Bilder herunterladen",
+  "Tất Cả (12 Công Cụ)": "Alle (12 Werkzeuge)",
+  "TỔNG TIỀN THANH TOÁN:": "GESAMTZAHLUNGSBETRAG:",
+  "Tổng Số Hóa Đơn": "Gesamtzahl der Rechnungen",
+  "Tổng Thanh Toán": "Gesamtzahlung",
+  "Tổng tiền chưa thuế:": "Zwischensumme (ohne Steuer):",
+  "Tự động nhận diện dòng/cột & xuất file .xlsx sạch sẽ": "Zeilen/Spalten automatisch erkennen & eine saubere .xlsx-Datei exportieren",
+  "Tỷ lệ hoàn trả / hủy hàng dự kiến của shop:": "Erwartete Rücksende-/Stornoquote des Shops:",
+  "VD: 1-3, 5 hoặc 2, 4": "z. B. 1-3, 5 oder 2, 4",
+  "Vui lòng kéo thả các file .XML vào khung bên trái hoặc bấm vào nút \\\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\\\" ở góc trên.": "Bitte ziehen Sie .XML-Dateien in den linken Bereich oder klicken Sie oben auf die Schaltfläche \\\"⚡ 5 Beispielrechnungen testen\\\".",
+  "Vẽ Tay": "Von Hand zeichnen",
+  "Vẽ chữ ký tay hoặc chèn ảnh chữ ký trong suốt": "Eine handschriftliche Unterschrift zeichnen oder ein transparentes Unterschriftsbild einfügen",
+  "Xem 1 Hóa Đơn Mẫu": "Eine Beispielrechnung ansehen",
+  "Xem thumbnail từng trang, bỏ trang thừa": "Seitenvorschauen anzeigen, überflüssige Seiten entfernen",
+  "Xem trước số liệu": "Zahlen in der Vorschau anzeigen",
+  "Xoay & Lưu Về Máy": "Drehen & Herunterladen",
+  "Xoay Chiều Trang PDF": "PDF-Seiten drehen",
+  "Xuất Bảng Kê Excel": "Excel-Abrechnung exportieren",
+  "Xuất Bảng Kê Excel (.xlsx)": "Excel-Abrechnung exportieren (.xlsx)",
+  "Xuất Excel (.xlsx)": "Excel exportieren (.xlsx)",
+  "Xuất File PDF Mới": "Neue PDF-Datei exportieren",
+  "Xuất Thành File PDF (Khổ A4)": "Als PDF-Datei exportieren (A4-Format)",
+  "Xuất từng trang thành JPG/PNG nét cao": "Jede Seite als hochauflösendes JPG/PNG exportieren",
+  "Xóa": "Löschen",
+  "Xóa & Đổi Thứ Tự Trang\\n HOT": "Seiten löschen & neu anordnen\\n HOT",
+  "Xóa Hết": "Alles löschen",
+  "Xóa Lịch Sử & Dọn Sạch RAM": "Verlauf Löschen & RAM Leeren",
+  "Xóa Sạch Lịch Sử Khi Xong": "Verlauf Löschen Wenn Fertig",
+  "Xóa tất cả": "Alle löschen",
+  "Xóa vẽ lại": "Löschen und neu zeichnen",
+  "Xử Lý Ảnh Chuyên Nghiệp: Đổi Ảnh HEIC (iPhone) & Nén Ảnh": "Professionelle Bildverarbeitung: HEIC-Fotos (iPhone) konvertieren & Bilder komprimieren",
+  "ZIP": "ZIP",
+  "ZenTool": "ZenTool",
+  "ZenTool Suite": "ZenTool Suite",
+  "Đang giải mã ảnh HEIC trong RAM...": "HEIC-Bilder werden im RAM dekodiert...",
+  "Đang tính toán phân tích chỉ số...": "Kennzahlen werden berechnet und analysiert...",
+  "Đang tải thông tin ngành hàng...": "Kategorieinformationen werden geladen...",
+  "Đã chuyển đổi thành công: 0 ảnh": "Erfolgreich konvertiert: 0 Bilder",
+  "Đã chọn 0 tệp PDF:": "0 PDF-Dateien ausgewählt:",
+  "Đã chọn 0 ảnh:": "0 Bilder ausgewählt:",
+  "Đã nạp: 0 file": "Geladen: 0 Dateien",
+  "Đóng Chữ Ký & Lưu Hợp Đồng": "Unterschrift anwenden & Vertrag speichern",
+  "Đóng Dấu & Tải Về Máy": "Stempeln & Herunterladen",
+  "Đóng Dấu Bản Quyền (Watermark)": "Urheberrechts-Wasserzeichen hinzufügen",
+  "Địa chỉ: ...": "Adresse: ...",
+  "Định Dạng Xuất Ra:": "Ausgabeformat:",
+  "Định Dạng Đầu Ra:": "Ausgabeformat:",
+  "Đọc & Gom Bảng Kê Hóa Đơn Điện Tử XML Hàng Loạt": "Stapelverarbeitung von XML-E-Rechnungsabrechnungen lesen & zusammenfassen",
+  "Đọc & Gom Hóa Đơn XML": "XML-Rechnungen Einlesen",
+  "Đọc Hóa Đơn XML": "XML-Rechnungen lesen",
+  "Đổi Ảnh HEIC & Nén Ảnh": "Fotostudio & HEIC-Konverter",
+  "Đổi Ảnh HEIC (iPhone)": "iPhone HEIC Konvertieren",
+  "Độ nhạy xóa màu (Tolerance):": "Empfindlichkeit der Farbentfernung (Toleranz):",
+  "• 1-Click xuất ra file Excel chuẩn để kê khai thuế.": "• 1-Klick-Export in eine standardisierte Excel-Datei für die Steuererklärung.",
+  "• Bấm \\\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\\\" để trải nghiệm bảng kê kế toán mẫu tức thì.": "• Klicken Sie auf \\\"⚡ 5 Beispielrechnungen testen\\\", um sofort eine Beispiel-Buchhaltungsabrechnung zu erleben.",
+  "• Kéo thả 1 hoặc nhiều file XML vào ô trên để bóc tách ngay.": "• Ziehen Sie eine oder mehrere XML-Dateien in das Feld oben, um sie sofort zu extrahieren.",
+  "⚡ Sửa Lỗi Font Ngay": "⚡ Schriftfehler jetzt beheben",
+  "⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu": "⚡ 5 Beispielrechnungen testen",
+  "⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu": "⚡ Beispiel-Bildkonvertierung testen",
+  "✓ Tự động lọc nền trắng thành trong suốt": "✓ Weißen Hintergrund automatisch in Transparenz umwandeln",
+  "💡 Hướng dẫn nhanh:": "💡 Kurzanleitung:",
+  "💡 Nền caro biểu thị vùng trong suốt. Khi chèn lên web hoặc sàn Shopee/TikTok, nền sẽ tự động hòa vào ảnh nền đích.": "💡 Das Schachbrettmuster zeigt transparente Bereiche an. Beim Einfügen auf einer Website oder bei Shopee/TikTok fügt sich der Hintergrund automatisch in den Zielhintergrund ein.",
+  "📑 Ghép & Xử Lý Trang (4)": "📑 Seiten & Zusammenführen (4)",
+  "📦 Tải Toàn Bộ (File ZIP)": "📦 Alles herunterladen (ZIP-Datei)",
+  "🔄 Chuyển Đổi & Nén (4)": "🔄 Konvertieren & Komprimieren (4)",
+  "🔒 Ký Tên & Bảo Mật (4)": "🔒 Signieren & Schützen (4)",
+  "Nhập mật khẩu (CCCD hoặc ngày sinh)...": "Enter password (ID number or date of birth)...",
+  "Tiếng Việt": "Vietnamesisch",
+  "English": "Englisch",
+  "Deutsch": "Deutsch",
+  "Tách Nền Ảnh 1 Chạm": "1-Klick Hintergrund Entferner",
+  "Tách Nền Ảnh (PNG)": "Hintergrund Entfernen (PNG)",
+  "Xem Trước Bảng": "Tabellenvorschau",
+  "Đang xử lý...": "Wird verarbeitet...",
+  "Thành công!": "Erfolgreich!",
+  "Đã sao chép!": "In Zwischenablage kopiert!",
+  "Báo cáo lợi nhuận": "Gewinnbericht",
+  "Xem chi tiết": "Details Anzeigen",
+  "Đóng": "Schließen",
+  "In Bảng Kê": "Aufstellung Drucken",
+  "Xuất Excel Bảng Kê": "Rechnungen Nach Excel Exportieren",
+  "Tải Về": "Herunterladen",
+  "Làm lại": "Zurücksetzen",
+  "\"Ảnh chụp từ điện thoại nét căng thì cứ để nguyên đăng lên, tại sao phải nén làm gì?\"": "\"Handyfotos sind doch gestochen scharf – warum sollte man sie vor dem Hochladen überhaupt komprimieren?\"",
+  "\"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu\"": "\"⚡ 5-Rechnungen-Musteraufstellung testen\"",
+  "\"⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu\"": "\"⚡ Beispiel-Bildkonvertierung testen\"",
+  "-0 đ": "-0 VND",
+  ". Chúng tôi không lưu trữ, không sao chép, và không có máy chủ trung gian nào có thể xem được số liệu kinh doanh của bạn.": ". Wir speichern nichts, kopieren nichts, und es gibt keinen Zwischenserver, der Ihre Geschäftsdaten einsehen kann.",
+  ". Dung lượng quá nặng này chính là thủ phạm gây ra 4 rắc rối lớn hàng ngày:": ". Diese übermäßige Dateigröße ist der Auslöser für 4 große tägliche Probleme:",
+  ". Thực tế, một bức ảnh chụp điện thoại thường nặng từ": ". Tatsächlich wiegt ein Handyfoto in der Regel zwischen",
+  ". Xử lý 100% tại trình duyệt máy tính của bạn, không upload ảnh lên mạng, không yêu cầu đăng ký hay thẻ tín dụng.": ". 100 % Verarbeitung im Browser Ihres Computers, kein Bild-Upload ins Internet, keine Registrierung und keine Kreditkarte erforderlich.",
+  ". ZenTool giúp bạn chuyển đổi hàng loạt sang": ". Mit ZenTool konvertieren Sie im Stapel zu",
+  ".HEIC": ".HEIC",
+  "5MB đến 15MB": "5 MB bis 15 MB",
+  "70% — Tối Ưu Dung Lượng (Cực nhẹ cho gửi mail)": "70 % — Größenoptimiert (ultraleicht für E-Mail)",
+  "80% — Tiêu Chuẩn Vàng (Đẹp & Giảm 70% dung lượng)": "80 % — Goldstandard (tolle Qualität & 70 % kleiner)",
+  "90% — Cực Kỳ Sắc Nét (Gần như không nén)": "90 % — Extrem scharf (nahezu ohne Kompression)",
+  "Bấm \"Xem\" để mở bản in chi tiết từng hóa đơn": "Klicken Sie auf \"Ansehen\", um den detaillierten Ausdruck jeder Rechnung zu öffnen",
+  "Bấm \"Xóa\" trên trang để loại bỏ hoặc mũi tên để dời vị trí:": "Klicken Sie auf \"Löschen\" auf einer Seite, um sie zu entfernen, oder auf die Pfeile, um sie zu verschieben:",
+  "Chuẩn JPEG / JPG (Khuyên Dùng - Tương thích 100% mọi nơi)": "JPEG-/JPG-Standard (empfohlen – 100 % überall kompatibel)",
+  "Chuẩn JPEG / JPG Tiêu Chuẩn": "Standard-JPEG / JPG",
+  "Chuẩn PNG (Giữ chi tiết nguyên bản chất lượng cao)": "PNG-Standard (bewahrt hochwertige Originaldetails)",
+  "Chuẩn WebP (Siêu nhẹ cho Website & Đăng sàn)": "WebP-Standard (ultraleicht für Websites & Marktplatz-Listings)",
+  "Chuẩn WebP Thế Hệ Mới (Siêu Nhẹ - Khuyên Dùng)": "WebP-Standard der neuen Generation (ultraleicht – empfohlen)",
+  "Chẩn Đoán Của Trợ Lý:": "Diagnose des Assistenten:",
+  "Chọn các ảnh từ iPhone (.heic) kéo vào khung bên trái, hoặc bấm": "Wählen Sie Fotos von Ihrem iPhone (.heic) und ziehen Sie sie in den linken Bereich, oder klicken Sie auf",
+  "Các sàn thương mại điện tử yêu cầu ảnh tải lên phải dưới 1MB - 2MB. Ảnh nén sang chuẩn": "E-Commerce-Marktplätze verlangen hochgeladene Bilder unter 1 MB – 2 MB. Bilder, die in das Format komprimiert werden",
+  "Giải pháp thay thế hoàn hảo cho Remove.bg và Canva Pro: Tách phông nền trắng/màu đơn sắc của ảnh sản phẩm, ảnh chụp chân dung và xuất thẳng file": "Die perfekte Alternative zu Remove.bg und Canva Pro: Weiße/einfarbige Hintergründe von Produkt- und Porträtfotos entfernen und direkt exportieren als",
+  "Gộp, tách, nén, mở khóa sao kê ngân hàng, ký hợp đồng, xóa/đổi thứ tự trang, và cứu lỗi font chữ. 100% Client-Side trong RAM, bảo mật tuyệt đối!": "Zusammenführen, teilen, komprimieren, Kontoauszüge entsperren, Verträge signieren, Seiten löschen/umsortieren und Schriftfehler beheben. 100 % clientseitig im RAM, absolut sicher!",
+  "Hiển thị": "Anzeigen",
+  "Hòm thư Gmail hay Outlook thường giới hạn file đính kèm dưới 25MB. Đính kèm 3 bức ảnh gốc là hòm thư báo lỗi không gửi được. Nén ảnh giúp bạn gửi cả chục ảnh nhẹ nhàng.": "Gmail- oder Outlook-Postfächer begrenzen Anhänge meist auf unter 25 MB. Hängen Sie 3 Originalfotos an, meldet das Postfach einen Sendefehler. Mit komprimierten Bildern senden Sie mühelos ein Dutzend Fotos.",
+  "JPG / PNG chuẩn quốc tế": "JPG / PNG nach internationalem Standard",
+  "Khách hàng lướt web trên điện thoại nếu ảnh load quá 3 giây họ sẽ tắt ngay lập tức. Nén ảnh giúp trang web mở ra trong tích tắc, giữ chân khách mua hàng.": "Wenn Bilder auf dem Handy länger als 3 Sekunden laden, springen Kunden sofort ab. Komprimierte Bilder lassen Ihre Website in Sekundenbruchteilen öffnen und halten Käufer.",
+  "Kéo thả 50 - 100 file XML cùng lúc để bóc tách thông tin và tự động xuất ra Bảng Kê Excel (.xlsx) chuẩn thuế. 100% trong RAM máy tính.": "Ziehen Sie 50 – 100 XML-Dateien gleichzeitig per Drag & Drop, um Daten zu extrahieren und automatisch eine steuerkonforme Excel-Aufstellung (.xlsx) zu exportieren. 100 % im RAM Ihres Computers.",
+  "Ký Hiệu": "Serie",
+  "Ký Tên Lên Hợp Đồng PDF": "PDF-Verträge signieren",
+  "Ký hiệu:": "Serie:",
+  "LƯU Ý MIỄN TRỪ TRÁCH NHIỆM PHÁP LÝ:": "RECHTLICHER HAFTUNGSAUSSCHLUSS:",
+  "Lưu trữ 1.000 ảnh gốc tốn 10GB dung lượng máy. Sau khi nén chỉ còn chưa tới 1.5GB, không bao giờ phải lo máy tính bị báo đầy bộ nhớ.": "1.000 Originalfotos belegen 10 GB Speicherplatz. Nach der Kompression sind es unter 1,5 GB – Sie müssen nie befürchten, dass Ihr Computer zu wenig Speicher meldet.",
+  "MST Bán": "Verkäufer-Steuernummer",
+  "Mã số thuế:": "Steuernummer:",
+  "Mọi công thức và số liệu tính toán tại ZenTool chỉ mang tính chất": "Alle Formeln und Berechnungen in ZenTool dienen ausschließlich",
+  "Mọi file hóa đơn XML, chứng từ hợp đồng đều được": "Alle XML-Rechnungsdateien und Vertragsdokumente werden",
+  "Mở Khóa Mật Khẩu PDF": "PDF-Passwort entsperren",
+  "Ngày Lập": "Ausstellungsdatum",
+  "Ngày lập:": "Ausstellungsdatum:",
+  "Người mua:": "Käufer:",
+  "Nhiều người thắc mắc:": "Viele fragen sich:",
+  "Nhật Ký Phiên Làm Việc": "Sitzungsprotokoll",
+  "Nén Cực Nhẹ (Giảm 75% - 85% cho gửi mail gấp)": "Ultraleicht (75 % – 85 % kleiner für dringende E-Mails)",
+  "Nén Dung Lượng PDF": "PDF-Größe komprimieren",
+  "Nén Giữ Nét Cao (Giảm 30% - 40% cho in ấn)": "Hochwertige Kompression (30 % – 40 % kleiner für den Druck)",
+  "PNG trong suốt Full HD": "Full-HD-PNG mit Transparenz",
+  "Phân bổ chính xác theo từng ngành hàng cụ thể, khấu trừ phí thanh toán (6%), phí hạ tầng (3k), phí ngành, chi phí hoàn hủy và thuế TNCN/GTGT.": "Genaue Zuordnung nach konkreter Warengruppe, abzüglich Zahlungsgebühren (6 %), Infrastrukturgebühren (3k), Branchengebühren, Rücksende-/Stornokosten sowie Einkommen- und Umsatzsteuer.",
+  "STT": "Nr.",
+  "Siêu nét (2.0x)": "Extrem scharf (2,0x)",
+  "Số HĐ": "Rechnungs-Nr.",
+  "Số Lượng": "Menge",
+  "Số tiền viết bằng chữ:": "Betrag in Worten:",
+  "Số tài khoản:": "Kontonummer:",
+  "Số:": "Nr.:",
+  "Thao Tác": "Aktionen",
+  "Thuế Suất": "Steuersatz",
+  "Thuế VAT": "MwSt.",
+  "Thành Tiền": "Gesamtbetrag",
+  "Tiêu Chuẩn (Giảm 50% - 70%, giữ chữ rõ nét)": "Standard (50 % – 70 % kleiner, Text bleibt scharf)",
+  "Tiền Hàng": "Warenwert",
+  "Tiền tệ:": "Währung:",
+  "Trang 1": "Seite 1",
+  "Trang cuối cùng (Khuyên Dùng)": "Letzte Seite (empfohlen)",
+  "Trích Xuất PDF Sang Ảnh": "PDF in Bilder umwandeln",
+  "Tên Hàng Hóa, Dịch Vụ": "Waren-/Dienstleistungsbezeichnung",
+  "VND": "VND",
+  "Vui lòng kéo thả các file .XML vào khung bên trái hoặc bấm vào nút": "Bitte ziehen Sie die .XML-Dateien in den linken Bereich oder klicken Sie auf die Schaltfläche",
+  "WebP": "WebP",
+  "Xoay Ngược 180 Độ (Lộn ngược đầu)": "Um 180 Grad drehen (kopfüber)",
+  "Xoay Phải 90 Độ (Thuận chiều kim đồng hồ)": "Um 90 Grad nach rechts drehen (im Uhrzeigersinn)",
+  "Xoay Trái 270 Độ (Ngược chiều kim đồng hồ)": "Um 270 Grad nach links drehen (gegen den Uhrzeigersinn)",
+  "Xóa & Đổi Thứ Tự Trang": "Seiten löschen & umsortieren",
+  "ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận Bán Hàng 100% Client-Side": "ZenTool Suite — 100 % clientseitige Büro-Tools & Verkaufsgewinn-Assistent",
+  "Zero Server Upload": "Zero Server Upload",
+  "báo lỗi không hỗ trợ định dạng này": "meldet, dass dieses Format nicht unterstützt wird",
+  "dự toán kinh doanh giả định và tham khảo": "hypothetische Geschäftskalkulationen und Referenzzwecke",
+  "dựa trên biểu phí công bố công khai của các sàn và biểu thuế hiện hành. Đây không phải là cam kết kế toán hay văn bản pháp lý thay thế cho quyết toán chính thức từ Cơ quan Thuế hoặc báo cáo tài chính Kênh Người Bán của sàn. Nhà bán hàng tự chịu trách nhiệm với chiến lược giá và nghĩa vụ thuế thực tế của mình.": "basierend auf öffentlich veröffentlichten Gebührenordnungen der Marktplätze und aktuellen Steuertabellen. Dies ist keine buchhalterische Zusage und kein Rechtsdokument, das die offizielle Abrechnung der Steuerbehörde oder die Finanzberichte des Verkäuferkanals des Marktplatzes ersetzt. Verkäufer sind für ihre eigene Preisstrategie und ihre tatsächlichen Steuerpflichten selbst verantwortlich.",
+  "file": "Datei",
+  "giữ nguyên độ sắc nét nhưng dung lượng giảm tới 80%, sàn duyệt ngay lập tức.": "behält die Schärfe bei und reduziert die Größe um bis zu 80 %, der Marktplatz genehmigt sie sofort.",
+  "hóa đơn": "Rechnung",
+  "iPhone từ iOS 11 mặc định lưu ảnh dưới định dạng": "iPhones speichern Fotos ab iOS 11 standardmäßig im Format",
+  "siêu nét chỉ trong 2 giây, không tải ảnh lên bất kỳ máy chủ nào!": "in nur 2 Sekunden extrem scharf, ohne Bilder auf einen Server hochzuladen!",
+  "tệp PDF:": "PDF-Datei:",
+  "xử lý trực tiếp trong bộ nhớ RAM trình duyệt máy tính của bạn": "direkt im RAM Ihres Computer-Browsers verarbeitet",
+  "ĐVT": "Einheit",
+  "Đã chuyển đổi thành công:": "Erfolgreich konvertiert:",
+  "Đã chọn": "Ausgewählt",
+  "Đã ký số điện tử": "Elektronisch signiert",
+  "Đã nạp:": "Geladen:",
+  "Đơn Giá": "Stückpreis",
+  "Đơn Vị Bán Hàng": "Verkäufer",
+  "Đơn Vị Bán Hàng:": "Verkäufer:",
+  "Đơn Vị Mua Hàng:": "Käufer:",
+  "Địa chỉ:": "Adresse:",
+  "Độ nét cao (1.5x)": "Hohe Schärfe (1,5x)",
+  "để tiết kiệm bộ nhớ. Nhưng máy tính Windows cũ, Zalo trên PC, phần mềm kế toán và các sàn Shopee/TikTok thường": "um Speicher zu sparen. Aber ältere Windows-Computer, Zalo am PC, Buchhaltungssoftware und die Marktplätze Shopee/TikTok oft",
+  "để trải nghiệm bảng kê kế toán mẫu tức thì.": "um die Muster-Buchhaltungsaufstellung sofort zu erleben.",
+  "để trải nghiệm.": "zum Ausprobieren.",
+  "Ảnh JPG": "JPG-Bild",
+  "Ảnh PNG": "PNG-Bild",
+  "ảnh": "Bild",
+  "ảnh:": "Bild:",
+  "ở góc trên.": "in der oberen Ecke.",
+  "• Bấm": "• Klicken Sie auf",
+  "🇩🇪 DE": "🇩🇪 DE",
+  "🇬🇧 EN": "🇬🇧 EN",
+  "🇻🇳 VI": "🇻🇳 VI"
+}
 };
+
+const UI_DICTIONARY = TRANSLATIONS;
 
 let currentLanguage = 'vi';
 
@@ -3025,6 +3589,11 @@ function initLanguage() {
   setLanguage(saved);
 }
 
+function normalizeText(str) {
+  if (!str) return '';
+  return str.replace(/\s+/g, ' ').trim();
+}
+
 function setLanguage(lang) {
   if (!['vi', 'en', 'de'].includes(lang)) lang = 'vi';
   currentLanguage = lang;
@@ -3032,41 +3601,145 @@ function setLanguage(lang) {
     localStorage.setItem('zentool_lang', lang);
   } catch (e) {}
 
+  // 1. Đồng bộ dropdown chọn ngôn ngữ
   const select = document.getElementById('lang-select');
   if (select && select.value !== lang) {
     select.value = lang;
   }
 
-  const dict = TRANSLATIONS[lang] || TRANSLATIONS['vi'];
+  const dict = UI_DICTIONARY[lang] || {};
 
-  // Apply translations to [data-i18n]
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
-    const key = el.getAttribute('data-i18n');
-    if (dict[key]) {
-      el.textContent = dict[key];
+  // 2. Quét & dịch toàn bộ cây DOM bằng TreeWalker (100% nội dung trang)
+  if (typeof document !== 'undefined' && document.body) {
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function(node) {
+          const parent = node.parentNode;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = parent.tagName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.nodeValue && node.nodeValue.trim().length > 0) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_SKIP;
+        }
+      },
+      false
+    );
+
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      if (typeof currentNode._origText === 'undefined') {
+        currentNode._origText = currentNode.nodeValue;
+      }
+
+      if (lang === 'vi') {
+        currentNode.nodeValue = currentNode._origText;
+      } else {
+        const origRaw = currentNode._origText;
+        const cleanKey = normalizeText(origRaw);
+        if (dict[cleanKey]) {
+          const leading = origRaw.match(/^\s*/)[0];
+          const trailing = origRaw.match(/\s*$/)[0];
+          currentNode.nodeValue = leading + dict[cleanKey] + trailing;
+        }
+      }
+      currentNode = walker.nextNode();
     }
-  });
 
-  // Apply placeholders [data-i18n-ph]
-  document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
-    const key = el.getAttribute('data-i18n-ph');
-    if (dict[key]) {
-      el.setAttribute('placeholder', dict[key]);
+    // 3. Dịch toàn bộ Placeholders (Ô tìm kiếm, ô nhập liệu)
+    document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach((el) => {
+      if (typeof el._origPlaceholder === 'undefined') {
+        el._origPlaceholder = el.placeholder;
+      }
+      if (lang === 'vi') {
+        el.placeholder = el._origPlaceholder;
+      } else {
+        const clean = normalizeText(el._origPlaceholder);
+        if (dict[clean]) {
+          el.placeholder = dict[clean];
+        }
+      }
+    });
+
+    // 4. Dịch toàn bộ Tiêu đề gợi ý (Tooltips title)
+    document.querySelectorAll('[title]').forEach((el) => {
+      if (el.id === 'lang-select') return;
+      if (typeof el._origTitle === 'undefined') {
+        el._origTitle = el.title;
+      }
+      if (lang === 'vi') {
+        el.title = el._origTitle;
+      } else {
+        const clean = normalizeText(el._origTitle);
+        if (dict[clean]) {
+          el.title = dict[clean];
+        }
+      }
+    });
+
+    // 5. Dịch toàn bộ các lựa chọn Dropdown (<option>)
+    document.querySelectorAll('select option').forEach((opt) => {
+      if (opt.parentElement && opt.parentElement.id === 'lang-select') return;
+      if (typeof opt._origText === 'undefined') {
+        opt._origText = opt.text;
+      }
+      if (lang === 'vi') {
+        opt.text = opt._origText;
+      } else {
+        const clean = normalizeText(opt._origText);
+        if (dict[clean]) {
+          opt.text = dict[clean];
+        }
+      }
+    });
+
+    // 6. Cập nhật thẻ tiêu đề website <title>
+    if (lang === 'vi') {
+      document.title = 'ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận Bán Hàng 100% Client-Side';
+    } else if (lang === 'en') {
+      document.title = 'ZenTool Suite — 100% Client-Side Privacy-First Productivity & Profit Suite';
+    } else if (lang === 'de') {
+      document.title = 'ZenTool Suite — 100% Client-Seitige Büro- & E-Commerce Suite';
     }
-  });
-
-  // Update document title
-  if (dict['app.title']) {
-    document.title = dict['app.title'];
   }
+
+  // 7. Cập nhật các bảng tính toán và danh sách động
+  try {
+    if (typeof calculateDetailedProfit === 'function') {
+      calculateDetailedProfit();
+    }
+  } catch (e) {}
+
+  try {
+    if (typeof batchInvoices !== 'undefined' && batchInvoices.length > 0 && typeof renderBatchInvoiceView === 'function') {
+      renderBatchInvoiceView(batchInvoices);
+    }
+  } catch (e) {}
+
+  try {
+    if (typeof renderOfficeSessionHistory === 'function') {
+      renderOfficeSessionHistory();
+    }
+  } catch (e) {}
+
+  try {
+    document.dispatchEvent(new CustomEvent('languagechange', { detail: { lang } }));
+  } catch (e) {}
 }
 
-// Helper translation function
-function t(key) {
-  const dict = TRANSLATIONS[currentLanguage] || TRANSLATIONS['vi'];
-  return dict[key] || key;
+// Tra cứu từ ngữ động cho Toast, Dialog & Thông báo
+function t(text) {
+  if (currentLanguage === 'vi' || !text) return text;
+  const clean = normalizeText(text);
+  const dict = UI_DICTIONARY[currentLanguage];
+  if (dict && dict[clean]) return dict[clean];
+  return text;
 }
-
 
 // ============================================================
 // TOOL 12: BÓC TÁCH BẢNG BIỂU PDF SANG EXCEL (.XLSX) (PHASE 3)
