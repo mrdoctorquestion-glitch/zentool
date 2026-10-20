@@ -1,0 +1,27 @@
+# ZenTool Suite — Robots Exclusion Standard & Anti-Scraping Rules
+User-agent: *
+Allow: /
+Disallow: /vendor/
+Disallow: /api/
+
+# Block Aggressive Scrapers & Automated Crawlers
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /
+
+User-agent: curl
+Disallow: /
+
+User-agent: Wget
+Disallow: /

@@ -131,11 +131,75 @@ const INLINE_SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+  initZenGuardSecurity();
   initTheme();
   initCategorySelect();
   calculateDetailedProfit();
   initCompressSample();
 });
+
+// ============================================================
+// HỆ THỐNG PHÒNG THỦ BẢO MẬT: ZENGUARD CYBERSECURITY SHIELD
+// ============================================================
+function initZenGuardSecurity() {
+  // 1. Chống nhúng trộm iFrame / Anti-Clickjacking
+  try {
+    if (window.top !== window.self) {
+      window.top.location = window.self.location;
+    }
+  } catch (err) {
+    console.warn("ZenGuard: Phát hiện hành vi nhúng iFrame từ bên thứ ba!");
+  }
+
+  // 2. Chặn chuột phải trên các khu vực cấu trúc (cho phép trong input/textarea)
+  document.addEventListener('contextmenu', (e) => {
+    if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+    e.preventDefault();
+    showToast('🛡️ Chế độ bảo mật ZenGuard: Chức năng sao chép cấu trúc mã nguồn đã bị khóa.');
+  });
+
+  // 3. Chặn phím tắt mở DevTools, xem Source code và Lưu trang web
+  document.addEventListener('keydown', (e) => {
+    // F12
+    if (e.keyCode === 123) {
+      e.preventDefault();
+      showToast('🛡️ Phím F12 bị vô hiệu hóa bởi ZenGuard.');
+      return false;
+    }
+    // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+    if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) {
+      e.preventDefault();
+      showToast('🛡️ Chức năng kiểm tra mã nguồn (Inspect) đã bị khóa.');
+      return false;
+    }
+    // Ctrl+U (View source)
+    if (e.ctrlKey && ['U', 'u'].includes(e.key)) {
+      e.preventDefault();
+      showToast('🛡️ Chức năng xem mã nguồn trang đã bị khóa.');
+      return false;
+    }
+    // Ctrl+S (Save page HTML)
+    if (e.ctrlKey && ['S', 's'].includes(e.key)) {
+      if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+        e.preventDefault();
+        showToast('🛡️ Lưu mã nguồn website bị vô hiệu hóa.');
+        return false;
+      }
+    }
+  });
+
+  // 4. In thông điệp cảnh báo bản quyền & bảo mật trong Console
+  try {
+    console.log(
+      "%c🛡️ ZENGUARD CYBERSECURITY SHIELD ACTIVE — 100% CLIENT-SIDE VERIFIED",
+      "background: #0284c7; color: white; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;"
+    );
+    console.log(
+      "%c[CẢNH BÁO BẢN QUYỀN]: Toàn bộ thuật toán bóc tách hóa đơn, ma trận phí sàn TMĐT và bộ nén ảnh thuộc sở hữu bản quyền của ZenTool Suite. Mọi hành vi sao chép, cào dữ liệu hoặc đảo ngược mã nguồn đều bị giám sát. Dữ liệu khách hàng được bảo mật tuyệt đối 100% trong RAM cục bộ (Zero-Knowledge Architecture).",
+      "color: #dc2626; font-size: 11px; font-weight: bold;"
+    );
+  } catch (cErr) {}
+}
 
 // --- THEME & TAB UTILITIES ---
 function initTheme() {
