@@ -940,15 +940,44 @@ function clearOfficeSessionHistory() {
   officeSessionHistory = [];
   renderOfficeHistory();
 
-  // Reset toàn bộ file đang chọn trên cả 6 công cụ
+  // Reset toàn bộ file đang chọn trên cả 11 công cụ
   clearAllPdfMerge();
   clearSplitPdf();
   clearRotatePdf();
   clearWatermarkPdf();
   clearAllImagesForPdf();
   clearFontConverter();
+  clearReorderPdf();
+  clearCompressPdf();
+  clearPdfToImg();
+  clearUnlockPdf();
+  clearSignPdf();
 
   showToast('🧹 Đã xóa sạch lịch sử phiên làm việc và giải phóng toàn bộ bộ nhớ RAM!');
+}
+
+// Bộ lọc phân loại 11 công cụ PDF văn phòng
+function filterPdfTools(cat) {
+  const cards = document.querySelectorAll('.tool-card');
+  const buttons = ['all', 'pages', 'convert', 'security'];
+  buttons.forEach(b => {
+    const btn = document.getElementById(`filter-tool-${b}`);
+    if (btn) {
+      if (b === cat) {
+        btn.className = "px-3 py-1.5 rounded-lg font-bold transition bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 shadow-sm";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition";
+      }
+    }
+  });
+
+  cards.forEach(card => {
+    if (cat === 'all' || card.classList.contains(`tool-cat-${cat}`)) {
+      card.classList.remove('hidden');
+    } else {
+      card.classList.add('hidden');
+    }
+  });
 }
 
 // 1. Gộp File PDF (Hỗ trợ xóa từng file chọn nhầm hoặc xóa tất cả)
@@ -1124,6 +1153,11 @@ async function convertImagesToPdf() {
 
   try {
     const pdfDoc = await PDFLib.PDFDocument.create();
+    const A4_W = 595.28;
+    const A4_H = 841.89;
+    const MARGIN = 30;
+    const MAX_W = A4_W - (MARGIN * 2);
+    const MAX_H = A4_H - (MARGIN * 2);
 
     for (const file of selectedImagesForPdf) {
       const arrayBuffer = await file.arrayBuffer();
@@ -1134,12 +1168,18 @@ async function convertImagesToPdf() {
         image = await pdfDoc.embedPng(arrayBuffer);
       }
 
-      const page = pdfDoc.addPage([image.width, image.height]);
+      const scale = Math.min(MAX_W / image.width, MAX_H / image.height, 1);
+      const drawW = image.width * scale;
+      const drawH = image.height * scale;
+      const posX = (A4_W - drawW) / 2;
+      const posY = (A4_H - drawH) / 2;
+
+      const page = pdfDoc.addPage([A4_W, A4_H]);
       page.drawImage(image, {
-        x: 0,
-        y: 0,
-        width: image.width,
-        height: image.height
+        x: posX,
+        y: posY,
+        width: drawW,
+        height: drawH
       });
     }
 
@@ -1148,12 +1188,12 @@ async function convertImagesToPdf() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Anh_Sang_PDF_${Date.now()}.pdf`;
+    a.download = `ZenTool_GhepAnh_A4_${Date.now()}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
     
-    logOfficeAction('Ảnh sang PDF', `Đã chuyển đổi thành công ${selectedImagesForPdf.length} hình ảnh sang file PDF`);
-    showToast(`🎉 Chuyển ${selectedImagesForPdf.length} ảnh sang PDF thành công! Đã lưu về máy.`);
+    logOfficeAction('Ảnh sang PDF', `Đã ghép thành công ${selectedImagesForPdf.length} ảnh sang PDF chuẩn A4`);
+    showToast(`🎉 Ghép ${selectedImagesForPdf.length} ảnh sang PDF chuẩn A4 thành công!`);
   } catch (err) {
     alert('Lỗi chuyển đổi: ' + err.message);
   }
@@ -1479,6 +1519,694 @@ function copyConvertedFont() {
   if (!out) return;
   navigator.clipboard.writeText(out);
   showToast('📋 Đã sao chép văn bản Unicode chuẩn sang bộ nhớ tạm!');
+}
+
+// ------------------------------------------------------------
+// 7. XÓA TRANG & ĐỔI THỨ TỰ TRANG PDF TRỰC QUAN (MỚI ⭐)
+// ------------------------------------------------------------
+let reorderPdfBytes = null;
+let reorderPdfFileName = '';
+let reorderPages = [];
+
+async function handlePdfForReorder(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  reorderPdfFileName = file.name;
+  reorderPdfBytes = await file.arrayBuffer();
+  reorderPages = [];
+
+  document.getElementById('reorder-file-info').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  document.getElementById('reorder-controls').classList.remove('hidden');
+
+  const grid = document.getElementById('reorder-grid');
+  grid.innerHTML = '<div class="col-span-3 py-4 text-center text-purple-600 font-bold text-xs"><i class="ri-loader-4-line animate-spin text-base"></i> Đang kết xuất hình ảnh các trang...</div>';
+
+  try {
+    if (window.pdfjsLib) {
+      const loadingTask = pdfjsLib.getDocument({ data: reorderPdfBytes });
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 0.25 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        reorderPages.push({
+          pageNum: i,
+          originalIndex: i - 1,
+          thumbUrl: canvas.toDataURL(),
+          deleted: false
+        });
+      }
+    } else {
+      const isReady = await ensurePdfLib();
+      if (isReady) {
+        const doc = await PDFLib.PDFDocument.load(reorderPdfBytes);
+        const numPages = doc.getPageCount();
+        for (let i = 1; i <= numPages; i++) {
+          reorderPages.push({
+            pageNum: i,
+            originalIndex: i - 1,
+            thumbUrl: '',
+            deleted: false
+          });
+        }
+      }
+    }
+    renderReorderGrid();
+  } catch (err) {
+    console.error("Lỗi dựng trang PDF:", err);
+    alert("Không thể đọc tệp PDF. Tệp có thể có mật khẩu bảo vệ hoặc bị lỗi định dạng.");
+  }
+  event.target.value = '';
+}
+
+function renderReorderGrid() {
+  const grid = document.getElementById('reorder-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (!reorderPages.length) {
+    grid.innerHTML = '<p class="col-span-3 text-center text-slate-400 py-3">Không có trang nào.</p>';
+    return;
+  }
+
+  reorderPages.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = `p-1.5 rounded-lg border text-center text-[10px] space-y-1 transition relative ${
+      p.deleted ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 opacity-50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+    }`;
+
+    div.innerHTML = `
+      <div class="h-16 w-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded overflow-hidden">
+        ${p.thumbUrl ? `<img src="${p.thumbUrl}" class="max-h-16 object-contain" />` : `<span class="font-bold text-slate-400">Trang ${p.pageNum}</span>`}
+      </div>
+      <div class="flex items-center justify-between px-1">
+        <span class="font-bold ${p.deleted ? 'line-through text-rose-500' : 'text-slate-700 dark:text-slate-300'}">P.${p.pageNum}</span>
+        <div class="flex gap-0.5">
+          <button type="button" onclick="shiftReorderPage(${idx}, -1)" class="px-1 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 font-bold" title="Dời sang trái">◄</button>
+          <button type="button" onclick="shiftReorderPage(${idx}, 1)" class="px-1 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 font-bold" title="Dời sang phải">►</button>
+        </div>
+      </div>
+      <button type="button" onclick="toggleDeletePage(${idx})" class="w-full py-0.5 text-[9px] font-bold rounded ${
+        p.deleted ? 'bg-emerald-50 text-emerald-600 border border-emerald-300' : 'bg-rose-50 text-rose-600 border border-rose-200'
+      }">
+        ${p.deleted ? 'Khôi phục' : 'Xóa trang'}
+      </button>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function toggleDeletePage(idx) {
+  if (reorderPages[idx]) {
+    reorderPages[idx].deleted = !reorderPages[idx].deleted;
+    renderReorderGrid();
+  }
+}
+
+function shiftReorderPage(idx, dir) {
+  const targetIdx = idx + dir;
+  if (targetIdx >= 0 && targetIdx < reorderPages.length) {
+    const tmp = reorderPages[idx];
+    reorderPages[idx] = reorderPages[targetIdx];
+    reorderPages[targetIdx] = tmp;
+    renderReorderGrid();
+  }
+}
+
+function clearReorderPdf() {
+  reorderPdfBytes = null;
+  reorderPdfFileName = '';
+  reorderPages = [];
+  document.getElementById('reorder-controls')?.classList.add('hidden');
+  const input = document.getElementById('pdf-reorder-input');
+  if (input) input.value = '';
+}
+
+async function executeReorderPdf() {
+  if (!reorderPdfBytes) {
+    alert("Vui lòng chọn file PDF để sắp xếp trang.");
+    return;
+  }
+  const activePages = reorderPages.filter(p => !p.deleted);
+  if (!activePages.length) {
+    alert("Anh đã xóa hết tất cả các trang! Vui lòng giữ lại ít nhất 1 trang.");
+    return;
+  }
+
+  const isReady = await ensurePdfLib();
+  if (!isReady) return;
+
+  try {
+    const srcDoc = await PDFLib.PDFDocument.load(reorderPdfBytes);
+    const newDoc = await PDFLib.PDFDocument.create();
+
+    const indices = activePages.map(p => p.originalIndex);
+    const copied = await newDoc.copyPages(srcDoc, indices);
+    copied.forEach(p => newDoc.addPage(p));
+
+    const newBytes = await newDoc.save();
+    const blob = new Blob([newBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ZenTool_XepTrang_${Date.now()}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    logOfficeAction('Xóa/Đổi trang PDF', `Đã xuất file PDF mới gồm ${activePages.length} trang từ "${reorderPdfFileName}"`);
+    showToast(`🎉 Xuất file PDF mới thành công (${activePages.length} trang)!`);
+  } catch (err) {
+    alert("Lỗi xuất PDF: " + err.message);
+  }
+}
+
+// ------------------------------------------------------------
+// 8. NÉN GIẢM DUNG LƯỢNG FILE PDF (MỚI ⭐)
+// ------------------------------------------------------------
+let compressPdfBytes = null;
+let compressPdfFileName = '';
+let compressPdfOrigSize = 0;
+
+function handlePdfForCompress(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  compressPdfFileName = file.name;
+  compressPdfOrigSize = file.size;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    compressPdfBytes = e.target.result;
+    document.getElementById('compress-file-info').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    document.getElementById('compress-controls').classList.remove('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function clearCompressPdf() {
+  compressPdfBytes = null;
+  compressPdfFileName = '';
+  compressPdfOrigSize = 0;
+  document.getElementById('compress-controls')?.classList.add('hidden');
+  const input = document.getElementById('pdf-compress-input');
+  if (input) input.value = '';
+}
+
+async function executeCompressPdf() {
+  if (!compressPdfBytes) {
+    alert("Vui lòng chọn file PDF để nén.");
+    return;
+  }
+
+  const isReady = await ensurePdfLib();
+  if (!isReady) return;
+
+  showToast("Đang tối ưu hóa luồng nhị phân PDF...");
+
+  try {
+    const doc = await PDFLib.PDFDocument.load(compressPdfBytes);
+    
+    // Lược bỏ metadata thừa
+    doc.setTitle('');
+    doc.setAuthor('');
+    doc.setSubject('');
+    doc.setKeywords([]);
+    doc.setProducer('ZenTool Suite Optimizer');
+    doc.setCreator('ZenTool');
+
+    // Lưu với cấu hình Object Streams nén chặt
+    const compressedBytes = await doc.save({
+      useObjectStreams: true,
+      addDefaultPage: false,
+      objectsPerTick: 100
+    });
+
+    const newSize = compressedBytes.length;
+    const savedPercent = Math.max(0, Math.round((1 - (newSize / compressPdfOrigSize)) * 100));
+
+    const blob = new Blob([compressedBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ZenTool_Nen_${compressPdfFileName}`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    logOfficeAction('Nén PDF', `Đã nén tệp "${compressPdfFileName}": ${(compressPdfOrigSize/1024).toFixed(1)} KB ➔ ${(newSize/1024).toFixed(1)} KB (Giảm -${savedPercent}%)`);
+    showToast(`🎉 Nén PDF thành công! Đã giảm -${savedPercent}% dung lượng.`);
+  } catch (err) {
+    alert("Lỗi nén file PDF: " + err.message);
+  }
+}
+
+// ------------------------------------------------------------
+// 9. TRÍCH XUẤT ẢNH TỪ PDF SANG JPG/PNG & 1-CLICK ZIP (MỚI ⭐)
+// ------------------------------------------------------------
+let extractPdfBytes = null;
+let extractPdfFileName = '';
+
+function handlePdfForImagesExtract(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  extractPdfFileName = file.name;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    extractPdfBytes = e.target.result;
+    document.getElementById('pdf-to-img-info').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    document.getElementById('pdf-to-img-controls').classList.remove('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function clearPdfToImg() {
+  extractPdfBytes = null;
+  extractPdfFileName = '';
+  document.getElementById('pdf-to-img-controls')?.classList.add('hidden');
+  const input = document.getElementById('pdf-to-img-input');
+  if (input) input.value = '';
+}
+
+async function executePdfToImages() {
+  if (!extractPdfBytes) {
+    alert("Vui lòng chọn file PDF để trích xuất ảnh.");
+    return;
+  }
+
+  if (!window.pdfjsLib) {
+    alert("Thư viện PDF.js đang được nạp. Anh vui lòng thử lại sau 3 giây.");
+    return;
+  }
+
+  const btn = document.getElementById('btn-extract-pdf-images');
+  if (btn) btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Đang trích xuất ảnh...';
+
+  const format = document.getElementById('pdf-img-format')?.value || 'jpeg';
+  const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+  const ext = format === 'png' ? 'png' : 'jpg';
+  const scale = Number(document.getElementById('pdf-img-dpi')?.value) || 1.5;
+
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: extractPdfBytes });
+    const pdf = await loadingTask.promise;
+    const numPages = pdf.numPages;
+
+    const images = [];
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const blob = await new Promise(res => canvas.toBlob(res, mimeType, 0.9));
+      images.push({ pageNum: i, blob, fileName: `Trang_${i}.${ext}` });
+    }
+
+    if (typeof JSZip !== 'undefined') {
+      const zip = new JSZip();
+      const folder = zip.folder(`ZenTool_Anh_PDF_${extractPdfFileName.replace('.pdf', '')}`);
+      images.forEach(img => folder.file(img.fileName, img.blob));
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZenTool_PDF_Trang_Anh_${Date.now()}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`📦 Đã trích xuất ${images.length} trang và đóng gói ZIP thành công!`);
+    } else {
+      images.forEach((img, idx) => {
+        setTimeout(() => {
+          const url = URL.createObjectURL(img.blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = img.fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+        }, idx * 200);
+      });
+      showToast(`🎉 Đã xuất thành công ${images.length} ảnh từ file PDF!`);
+    }
+
+    logOfficeAction('Trích xuất ảnh PDF', `Đã xuất ${numPages} trang thành ảnh từ "${extractPdfFileName}"`);
+  } catch (err) {
+    console.error("Lỗi trích xuất ảnh:", err);
+    alert("Lỗi trích xuất ảnh PDF: " + err.message);
+  } finally {
+    if (btn) btn.innerHTML = '<i class="ri-folder-zip-line"></i> Trích Xuất & Tải File ZIP';
+  }
+}
+
+// ------------------------------------------------------------
+// 10. MỞ KHÓA / GỠ MẬT KHẨU PDF SAO KÊ NGÂN HÀNG (MỚI ⭐)
+// ------------------------------------------------------------
+let unlockPdfBytes = null;
+let unlockPdfFileName = '';
+
+function handlePdfForUnlock(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  unlockPdfFileName = file.name;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    unlockPdfBytes = e.target.result;
+    document.getElementById('unlock-file-info').textContent = file.name;
+    document.getElementById('unlock-controls').classList.remove('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function clearUnlockPdf() {
+  unlockPdfBytes = null;
+  unlockPdfFileName = '';
+  document.getElementById('unlock-controls')?.classList.add('hidden');
+  const input = document.getElementById('pdf-unlock-input');
+  if (input) input.value = '';
+}
+
+async function executeUnlockPdf() {
+  if (!unlockPdfBytes) {
+    alert("Vui lòng chọn file PDF sao kê cần mở khóa.");
+    return;
+  }
+
+  const password = document.getElementById('unlock-password-input').value.trim();
+  if (!password) {
+    alert("Vui lòng nhập mật khẩu (CCCD/CMND hoặc ngày sinh) của file sao kê.");
+    return;
+  }
+
+  if (!window.pdfjsLib) {
+    alert("Thư viện giải mã đang nạp. Vui lòng thử lại sau vài giây.");
+    return;
+  }
+
+  showToast("Đang giải mã và loại bỏ mật khẩu vĩnh viễn...");
+
+  try {
+    const loadingTask = pdfjsLib.getDocument({
+      data: unlockPdfBytes,
+      password: password
+    });
+    const pdf = await loadingTask.promise;
+    const numPages = pdf.numPages;
+
+    const isReady = await ensurePdfLib();
+    if (!isReady) return;
+
+    // Tái tạo lại tài liệu PDF mới sạch hoàn toàn mật khẩu
+    const cleanDoc = await PDFLib.PDFDocument.create();
+
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const imgBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+      const imgBytes = await imgBlob.arrayBuffer();
+      const embeddedImg = await cleanDoc.embedJpg(imgBytes);
+
+      const ptWidth = viewport.width / 2.0;
+      const ptHeight = viewport.height / 2.0;
+      const newPage = cleanDoc.addPage([ptWidth, ptHeight]);
+      newPage.drawImage(embeddedImg, {
+        x: 0,
+        y: 0,
+        width: ptWidth,
+        height: ptHeight
+      });
+    }
+
+    const cleanBytes = await cleanDoc.save();
+    const blob = new Blob([cleanBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = unlockPdfFileName.replace('.pdf', '');
+    a.download = `${baseName}_DaMoKhoa_ZenTool.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    logOfficeAction('Mở khóa PDF', `Đã gỡ mật khẩu thành công tệp sao kê "${unlockPdfFileName}"`);
+    showToast("🎉 Đã mở khóa thành công! File tải về không còn mật khẩu nữa.");
+  } catch (err) {
+    console.error("Lỗi giải mã PDF:", err);
+    alert("Mật khẩu không chính xác hoặc tệp không hỗ trợ định dạng này. Anh vui lòng kiểm tra lại mật khẩu CCCD/ngày sinh!");
+  }
+}
+
+// ------------------------------------------------------------
+// 11. KÝ TÊN ĐIỆN TỬ LÊN HỢP ĐỒNG PDF (MỚI ⭐)
+// ------------------------------------------------------------
+let signPdfBytes = null;
+let signPdfFileName = '';
+let signMode = 'draw';
+let signatureImageDataUrl = null;
+let signatureCanvasInit = false;
+
+function handlePdfForSign(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  signPdfFileName = file.name;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    signPdfBytes = e.target.result;
+    document.getElementById('sign-file-info').textContent = file.name;
+    document.getElementById('sign-controls').classList.remove('hidden');
+
+    if (!signatureCanvasInit) {
+      initSignatureCanvas();
+      signatureCanvasInit = true;
+    }
+
+    if (window.pdfjsLib) {
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: signPdfBytes }).promise;
+        const select = document.getElementById('sign-page-select');
+        if (select) {
+          select.innerHTML = `
+            <option value="last">Trang cuối cùng (${pdf.numPages}) — Khuyên dùng</option>
+            ${Array.from({ length: pdf.numPages }, (_, i) => `<option value="${i + 1}">Trang ${i + 1}</option>`).join('')}
+          `;
+        }
+      } catch (e) {}
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function switchSignMode(mode) {
+  signMode = mode;
+  const drawArea = document.getElementById('sign-draw-area');
+  const uploadArea = document.getElementById('sign-upload-area');
+  const tabDraw = document.getElementById('sign-tab-draw');
+  const tabUpload = document.getElementById('sign-tab-upload');
+
+  if (mode === 'draw') {
+    drawArea?.classList.remove('hidden');
+    uploadArea?.classList.add('hidden');
+    tabDraw.className = "px-2.5 py-1 font-bold text-blue-600 border-b-2 border-blue-600";
+    tabUpload.className = "px-2.5 py-1 text-slate-400 hover:text-slate-600";
+  } else {
+    drawArea?.classList.add('hidden');
+    uploadArea?.classList.remove('hidden');
+    tabUpload.className = "px-2.5 py-1 font-bold text-blue-600 border-b-2 border-blue-600";
+    tabDraw.className = "px-2.5 py-1 text-slate-400 hover:text-slate-600";
+  }
+}
+
+function initSignatureCanvas() {
+  const canvas = document.getElementById('signature-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+
+  ctx.strokeStyle = "#0369a1"; // Nét mực xanh bút ký
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+  };
+
+  const startDraw = (e) => {
+    drawing = true;
+    const pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    if (e.touches) e.preventDefault();
+  };
+
+  const doDraw = (e) => {
+    if (!drawing) return;
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    if (e.touches) e.preventDefault();
+  };
+
+  const stopDraw = () => {
+    drawing = false;
+  };
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', doDraw);
+  canvas.addEventListener('mouseup', stopDraw);
+  canvas.addEventListener('mouseleave', stopDraw);
+
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', doDraw, { passive: false });
+  canvas.addEventListener('touchend', stopDraw);
+}
+
+function clearSignatureCanvas() {
+  const canvas = document.getElementById('signature-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  signatureImageDataUrl = null;
+}
+
+function handleSignatureImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        if (r > 215 && g > 215 && b > 215) {
+          d[i + 3] = 0;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      signatureImageDataUrl = canvas.toDataURL('image/png');
+      showToast("✓ Đã tải và tự động lọc trong suốt nền chữ ký!");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSignPdf() {
+  signPdfBytes = null;
+  signPdfFileName = '';
+  signatureImageDataUrl = null;
+  clearSignatureCanvas();
+  document.getElementById('sign-controls')?.classList.add('hidden');
+  const input = document.getElementById('pdf-sign-input');
+  if (input) input.value = '';
+}
+
+async function executeSignPdf() {
+  if (!signPdfBytes) {
+    alert("Vui lòng chọn file hợp đồng PDF cần ký.");
+    return;
+  }
+
+  let pngDataUrl = signatureImageDataUrl;
+  if (signMode === 'draw') {
+    const canvas = document.getElementById('signature-canvas');
+    if (canvas) pngDataUrl = canvas.toDataURL('image/png');
+  }
+
+  if (!pngDataUrl) {
+    alert("Vui lòng vẽ chữ ký tay hoặc tải ảnh chữ ký trước khi đóng dấu hợp đồng.");
+    return;
+  }
+
+  const isReady = await ensurePdfLib();
+  if (!isReady) return;
+
+  showToast("Đang chèn chữ ký vào hợp đồng...");
+
+  try {
+    const doc = await PDFLib.PDFDocument.load(signPdfBytes);
+    const pages = doc.getPages();
+    const total = pages.length;
+
+    const pageSelectVal = document.getElementById('sign-page-select')?.value || 'last';
+    let targetIndex = total - 1;
+    if (pageSelectVal !== 'last') {
+      targetIndex = Math.max(0, Math.min(total - 1, Number(pageSelectVal) - 1));
+    }
+
+    const targetPage = pages[targetIndex];
+    const { width, height } = targetPage.getSize();
+
+    const binStr = atob(pngDataUrl.split(',')[1]);
+    const bytes = new Uint8Array(binStr.length);
+    for (let i = 0; i < binStr.length; i++) {
+      bytes[i] = binStr.charCodeAt(i);
+    }
+
+    const sigImage = await doc.embedPng(bytes.buffer);
+
+    const sigW = 150;
+    const sigH = 65;
+    const posX = Math.max(20, width - sigW - 60);
+    const posY = Math.max(30, 80);
+
+    targetPage.drawImage(sigImage, {
+      x: posX,
+      y: posY,
+      width: sigW,
+      height: sigH
+    });
+
+    const signedBytes = await doc.save();
+    const blob = new Blob([signedBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const baseName = signPdfFileName.replace('.pdf', '');
+    a.download = `${baseName}_DaKy_ZenTool.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    logOfficeAction('Ký hợp đồng PDF', `Đã ký thành công lên trang ${targetIndex + 1} tệp "${signPdfFileName}"`);
+    showToast("🎉 Ký hợp đồng thành công! Đã lưu file PDF hoàn chỉnh về máy.");
+  } catch (err) {
+    console.error("Lỗi ký PDF:", err);
+    alert("Lỗi ký hợp đồng: " + err.message);
+  }
 }
 
 // ============================================================

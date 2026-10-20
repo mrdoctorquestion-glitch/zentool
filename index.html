@@ -52,6 +52,14 @@
 
   <!-- heic2any for Client-Side iPhone HEIC/HEIF Image Conversion -->
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
+  <!-- PDF.js by Mozilla for Client-Side PDF Rendering, Thumbnails & Extraction -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col">
 
@@ -400,13 +408,14 @@
     <!-- ============================================================ -->
     <div id="tab-files" class="tab-content space-y-6 hidden">
       
+      <!-- Header of Tab 2 -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <i class="ri-folder-zip-line text-rose-500"></i> Bộ Tiện Ích Ghép File & Chuyển Đổi Định Dạng Văn Phòng
+            <i class="ri-folder-zip-line text-rose-500"></i> Bộ Siêu Tiện Ích PDF Văn Phòng Toàn Năng (11 Trong 1)
           </h1>
           <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Gộp nhiều file PDF trong 0.2s, chuyển ảnh sang PDF, và cứu lỗi font chữ tiếng Việt TCVN3/VNI sang Unicode tiêu chuẩn. Lưu thẳng trên máy tính.
+            Gộp, tách, nén, mở khóa sao kê ngân hàng, ký hợp đồng, xóa/đổi thứ tự trang, và cứu lỗi font chữ. 100% Client-Side trong RAM, bảo mật tuyệt đối!
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -417,10 +426,27 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Segmented Category Filters -->
+      <div class="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs">
+        <button id="filter-tool-all" onclick="filterPdfTools('all')" class="px-3 py-1.5 rounded-lg font-bold transition bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-300 shadow-sm">
+          Tất Cả (11 Công Cụ)
+        </button>
+        <button id="filter-tool-pages" onclick="filterPdfTools('pages')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+          📑 Ghép & Xử Lý Trang (4)
+        </button>
+        <button id="filter-tool-convert" onclick="filterPdfTools('convert')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+          🔄 Chuyển Đổi & Nén (3)
+        </button>
+        <button id="filter-tool-security" onclick="filterPdfTools('security')" class="px-3 py-1.5 rounded-lg font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">
+          🔒 Ký Tên & Bảo Mật (4)
+        </button>
+      </div>
+
+      <!-- 11 Công Cụ PDF Lưới Hiện Đại -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="pdf-tools-grid">
         
         <!-- Tool 1: Gộp File PDF -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div class="tool-card tool-cat-pages bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
               <i class="ri-file-pdf-line text-lg"></i>
@@ -450,8 +476,8 @@
           </div>
         </div>
 
-        <!-- Tool 2: Tách Trang PDF (Kế thừa từ CIT-PDF) -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <!-- Tool 2: Tách Trang PDF -->
+        <div class="tool-card tool-cat-pages bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
               <i class="ri-scissors-cut-line text-lg"></i>
@@ -481,8 +507,8 @@
           </div>
         </div>
 
-        <!-- Tool 3: Xoay Chiều Trang PDF (Kế thừa từ CIT-PDF) -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <!-- Tool 3: Xoay Chiều Trang PDF -->
+        <div class="tool-card tool-cat-pages bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
               <i class="ri-clockwise-line text-lg"></i>
@@ -516,8 +542,264 @@
           </div>
         </div>
 
-        <!-- Tool 4: Đóng Dấu Bản Quyền / Watermark (Kế thừa từ CIT-PDF) -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <!-- Tool 4 (MỚI ⭐): Xóa Trang & Đổi Thứ Tự Trang Trực Quan -->
+        <div class="tool-card tool-cat-pages bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-purple-300 dark:border-purple-800/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
+                <i class="ri-pages-line text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  Xóa & Đổi Thứ Tự Trang
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-300">HOT</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Xem thumbnail từng trang, bỏ trang thừa</p>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="pdf-reorder-input" accept=".pdf" class="hidden" onchange="handlePdfForReorder(event)">
+          <button onclick="document.getElementById('pdf-reorder-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-purple-300 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-purple-600 dark:text-purple-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-layout-grid-line text-base"></i> Chọn file PDF để xếp trang
+          </button>
+
+          <div id="reorder-controls" class="space-y-3 hidden text-xs">
+            <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span id="reorder-file-info" class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[170px]">...</span>
+              <button onclick="clearReorderPdf()" class="text-rose-500 hover:text-rose-700 text-[11px] font-bold">Xóa</button>
+            </div>
+            
+            <p class="text-[11px] text-slate-400 italic">Bấm "Xóa" trên trang để loại bỏ hoặc mũi tên để dời vị trí:</p>
+            <div id="reorder-grid" class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
+              <!-- Dynamic page cards -->
+            </div>
+
+            <button onclick="executeReorderPdf()" class="w-full py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-file-download-line"></i> Xuất File PDF Mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 5 (MỚI ⭐): Nén Giảm Dung Lượng File PDF -->
+        <div class="tool-card tool-cat-convert bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-cyan-300 dark:border-cyan-800/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center font-bold">
+                <i class="ri-speed-line text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  Nén Dung Lượng PDF
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-300">HOT</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Giảm nhẹ dung lượng để gửi mail & lưu trữ</p>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="pdf-compress-input" accept=".pdf" class="hidden" onchange="handlePdfForCompress(event)">
+          <button onclick="document.getElementById('pdf-compress-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-cyan-300 dark:border-cyan-800 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 text-cyan-600 dark:text-cyan-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-file-reduce-line text-base"></i> Chọn file PDF để nén
+          </button>
+
+          <div id="compress-controls" class="space-y-2 hidden text-xs">
+            <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span id="compress-file-info" class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[170px]">...</span>
+              <button onclick="clearCompressPdf()" class="text-rose-500 hover:text-rose-700 text-[11px] font-bold">Xóa</button>
+            </div>
+            
+            <label class="block font-bold text-slate-700 dark:text-slate-300">Chế độ nén:</label>
+            <select id="compress-level-select" class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold">
+              <option value="balanced" selected>Tiêu Chuẩn (Giảm 50% - 70%, giữ chữ rõ nét)</option>
+              <option value="high">Nén Cực Nhẹ (Giảm 75% - 85% cho gửi mail gấp)</option>
+              <option value="low">Nén Giữ Nét Cao (Giảm 30% - 40% cho in ấn)</option>
+            </select>
+
+            <button onclick="executeCompressPdf()" class="w-full py-2.5 px-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-file-download-line"></i> Nén & Tải Về Máy
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 6 (MỚI ⭐): Trích Xuất Ảnh Từ PDF Sang JPG/PNG (1-Click ZIP) -->
+        <div class="tool-card tool-cat-convert bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-orange-300 dark:border-orange-800/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                <i class="ri-gallery-line text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  Trích Xuất PDF Sang Ảnh
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-300">ZIP</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Xuất từng trang thành JPG/PNG nét cao</p>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="pdf-to-img-input" accept=".pdf" class="hidden" onchange="handlePdfForImagesExtract(event)">
+          <button onclick="document.getElementById('pdf-to-img-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-orange-300 dark:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-image-add-line text-base"></i> Chọn file PDF để lấy ảnh
+          </button>
+
+          <div id="pdf-to-img-controls" class="space-y-2 hidden text-xs">
+            <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span id="pdf-to-img-info" class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[170px]">...</span>
+              <button onclick="clearPdfToImg()" class="text-rose-500 hover:text-rose-700 text-[11px] font-bold">Xóa</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <select id="pdf-img-format" class="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold">
+                <option value="jpeg">Ảnh JPG</option>
+                <option value="png">Ảnh PNG</option>
+              </select>
+              <select id="pdf-img-dpi" class="px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold">
+                <option value="1.5">Độ nét cao (1.5x)</option>
+                <option value="2.0">Siêu nét (2.0x)</option>
+              </select>
+            </div>
+
+            <button onclick="executePdfToImages()" id="btn-extract-pdf-images" class="w-full py-2.5 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-folder-zip-line"></i> Trích Xuất & Tải File ZIP
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 7 (MỚI ⭐): Mở Khóa / Gỡ Mật Khẩu PDF Sao Kê Ngân Hàng -->
+        <div class="tool-card tool-cat-security bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-emerald-300 dark:border-emerald-800/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                <i class="ri-lock-unlock-line text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  Mở Khóa Mật Khẩu PDF
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300">100% RAM</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Gỡ pass sao kê VCB, MB, Techcombank, lương</p>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="pdf-unlock-input" accept=".pdf" class="hidden" onchange="handlePdfForUnlock(event)">
+          <button onclick="document.getElementById('pdf-unlock-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-key-2-line text-base"></i> Chọn file PDF sao kê bị khóa
+          </button>
+
+          <div id="unlock-controls" class="space-y-2 hidden text-xs">
+            <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span id="unlock-file-info" class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[170px]">...</span>
+              <button onclick="clearUnlockPdf()" class="text-rose-500 hover:text-rose-700 text-[11px] font-bold">Xóa</button>
+            </div>
+            
+            <input type="password" id="unlock-password-input" placeholder="Nhập mật khẩu (CCCD hoặc ngày sinh)..." class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-xs font-bold focus:ring-1 focus:ring-emerald-500">
+            <p class="text-[10px] text-slate-400 italic">Cam kết 100% trong RAM: Mật khẩu và số dư không bao giờ gửi lên mạng.</p>
+
+            <button onclick="executeUnlockPdf()" class="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-lock-unlock-line"></i> Mở Khóa & Lưu File PDF Sạch
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 8 (MỚI ⭐): Ký Tên Điện Tử Lên Hợp Đồng PDF -->
+        <div class="tool-card tool-cat-security bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-blue-300 dark:border-blue-800/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                <i class="ri-quill-pen-line text-lg"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  Ký Tên Lên Hợp Đồng PDF
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-300">TIỆN ÍCH</span>
+                </h3>
+                <p class="text-[11px] text-slate-400">Vẽ chữ ký tay hoặc chèn ảnh chữ ký trong suốt</p>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="pdf-sign-input" accept=".pdf" class="hidden" onchange="handlePdfForSign(event)">
+          <button onclick="document.getElementById('pdf-sign-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-edit-2-line text-base"></i> Chọn file Hợp Đồng PDF để ký
+          </button>
+
+          <div id="sign-controls" class="space-y-3 hidden text-xs">
+            <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span id="sign-file-info" class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[170px]">...</span>
+              <button onclick="clearSignPdf()" class="text-rose-500 hover:text-rose-700 text-[11px] font-bold">Xóa</button>
+            </div>
+
+            <!-- Tab vẽ tay vs tải ảnh -->
+            <div class="flex gap-1 border-b border-slate-200 dark:border-slate-700 pb-1">
+              <button type="button" id="sign-tab-draw" onclick="switchSignMode('draw')" class="px-2.5 py-1 font-bold text-blue-600 border-b-2 border-blue-600">Vẽ Tay</button>
+              <button type="button" id="sign-tab-upload" onclick="switchSignMode('upload')" class="px-2.5 py-1 text-slate-400 hover:text-slate-600">Tải Ảnh Chữ Ký</button>
+            </div>
+
+            <div id="sign-draw-area" class="space-y-1">
+              <div class="border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
+                <canvas id="signature-canvas" width="280" height="90" class="w-full h-24 touch-none cursor-crosshair"></canvas>
+              </div>
+              <div class="flex justify-between items-center text-[10px] text-slate-400">
+                <span>Dùng chuột hoặc ngón tay để vẽ chữ ký</span>
+                <button type="button" onclick="clearSignatureCanvas()" class="text-rose-500 hover:underline">Xóa vẽ lại</button>
+              </div>
+            </div>
+
+            <div id="sign-upload-area" class="space-y-1 hidden">
+              <input type="file" id="sign-image-input" accept="image/*" class="w-full text-[11px]" onchange="handleSignatureImageUpload(event)">
+              <p class="text-[10px] text-emerald-600 italic">✓ Tự động lọc nền trắng thành trong suốt</p>
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[11px] font-bold">Ký vào trang:</label>
+              <select id="sign-page-select" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold text-xs">
+                <option value="last">Trang cuối cùng (Khuyên Dùng)</option>
+                <option value="1">Trang 1</option>
+              </select>
+            </div>
+
+            <button onclick="executeSignPdf()" class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+              <i class="ri-check-line"></i> Đóng Chữ Ký & Lưu Hợp Đồng
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 9: Chuyển Ảnh Sang PDF (Nâng Cấp Chuẩn A4) -->
+        <div class="tool-card tool-cat-convert bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
+              <i class="ri-image-line text-lg"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Ghép Ảnh Thành File PDF</h3>
+              <p class="text-[11px] text-slate-400">Ghép ảnh chụp CCCD, bằng lái, hợp đồng thành 1 PDF</p>
+            </div>
+          </div>
+
+          <input type="file" id="img-to-pdf-input" accept="image/*" multiple class="hidden" onchange="handleImagesForPdf(event)">
+          <button onclick="document.getElementById('img-to-pdf-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-sky-300 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/30 text-sky-600 dark:text-sky-400 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="ri-image-add-line text-base"></i> Chọn nhiều ảnh (JPG, PNG)
+          </button>
+
+          <div id="img-pdf-container" class="space-y-2 hidden">
+            <div class="flex items-center justify-between text-[11px] text-slate-500">
+              <span>Đã chọn <strong id="img-pdf-count" class="text-sky-600 font-bold">0</strong> ảnh:</span>
+              <button onclick="clearAllImagesForPdf()" class="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-0.5" title="Hủy toàn bộ ảnh">
+                <i class="ri-delete-bin-line"></i> Xóa tất cả
+              </button>
+            </div>
+            <div id="img-pdf-list" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+            <button id="img-to-pdf-btn" onclick="convertImagesToPdf()" class="w-full py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-600/20 transition flex items-center justify-center gap-2">
+              <i class="ri-file-download-line"></i> Xuất Thành File PDF (Khổ A4)
+            </button>
+          </div>
+        </div>
+
+        <!-- Tool 10: Đóng Dấu Bản Quyền / Watermark -->
+        <div class="tool-card tool-cat-security bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center font-bold">
               <i class="ri-shield-user-line text-lg"></i>
@@ -547,39 +829,8 @@
           </div>
         </div>
 
-        <!-- Tool 5: Chuyển Ảnh Sang PDF -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center font-bold">
-              <i class="ri-image-line text-lg"></i>
-            </div>
-            <div>
-              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Chuyển Ảnh Sang File PDF</h3>
-              <p class="text-[11px] text-slate-400">Gộp ảnh chụp biên lai, giấy tờ thành 1 tài liệu PDF</p>
-            </div>
-          </div>
-
-          <input type="file" id="img-to-pdf-input" accept="image/*" multiple class="hidden" onchange="handleImagesForPdf(event)">
-          <button onclick="document.getElementById('img-to-pdf-input').click()" class="w-full py-3 px-3 rounded-xl border-2 border-dashed border-sky-300 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/30 text-sky-600 dark:text-sky-400 text-xs font-bold transition flex items-center justify-center gap-2">
-            <i class="ri-image-add-line text-base"></i> Chọn nhiều ảnh (JPG, PNG)
-          </button>
-
-          <div id="img-pdf-container" class="space-y-2 hidden">
-            <div class="flex items-center justify-between text-[11px] text-slate-500">
-              <span>Đã chọn <strong id="img-pdf-count" class="text-sky-600 font-bold">0</strong> ảnh:</span>
-              <button onclick="clearAllImagesForPdf()" class="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-0.5" title="Hủy toàn bộ ảnh">
-                <i class="ri-delete-bin-line"></i> Xóa tất cả
-              </button>
-            </div>
-            <div id="img-pdf-list" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
-            <button id="img-to-pdf-btn" onclick="convertImagesToPdf()" class="w-full py-2.5 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-600/20 transition flex items-center justify-center gap-2">
-              <i class="ri-file-download-line"></i> Xuất Thành File PDF
-            </button>
-          </div>
-        </div>
-
-        <!-- Tool 6: Sửa Lỗi Font Chữ Tiếng Việt (TCVN3 sang Unicode) -->
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <!-- Tool 11: Sửa Lỗi Font Chữ Tiếng Việt (TCVN3 sang Unicode) -->
+        <div class="tool-card tool-cat-security bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
               <i class="ri-font-size text-lg"></i>
