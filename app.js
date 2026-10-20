@@ -4,6 +4,9 @@
 // --- STATE MANAGEMENT ---
 let currentTab = 'invoice';
 let currentInvoiceData = null;
+let currentViewingInvoiceIndex = null;
+let batchInvoices = [];
+let convertedHeicFiles = [];
 let selectedPdfFiles = [];
 let selectedImagesForPdf = [];
 let uploadedImageForCompress = null;
@@ -191,108 +194,145 @@ function shareApp() {
 }
 
 // ============================================================
-// PHÂN HỆ 1: TRÌNH ĐỌC & KIỂM TRA HÓA ĐƠN ĐIỆN TỬ XML
+// PHÂN HỆ 1: TRÌNH ĐỌC & GOM BẢNG KÊ HÓA ĐƠN ĐIỆN TỬ XML (HÀNG LOẠT)
 // ============================================================
 
-function handleXmlUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+// Đọc 1 hoặc hàng loạt file XML cùng lúc trong RAM
+async function handleXmlUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    parseXmlInvoice(e.target.result);
-  };
-  reader.readAsText(file);
+  let loadedCount = 0;
+  for (const file of files) {
+    try {
+      const text = await readFileAsText(file);
+      const invoice = parseXmlInvoiceString(text, file.name);
+      if (invoice) {
+        batchInvoices.push(invoice);
+        loadedCount++;
+      }
+    } catch (err) {
+      console.error("Lỗi đọc file XML:", file.name, err);
+    }
+  }
+
+  if (loadedCount > 0) {
+    renderBatchInvoiceView();
+    showToast(`Đã nạp thành công ${loadedCount} hóa đơn XML vào bảng kê!`);
+  } else {
+    alert("Không tìm thấy dữ liệu hóa đơn hợp lệ trong các file XML vừa chọn.");
+  }
+
+  event.target.value = '';
 }
 
-function loadSampleInvoice() {
-  fetch('/api/sample-invoice')
-    .then(res => res.text())
-    .then(xmlString => {
-      parseXmlInvoice(xmlString);
-    })
-    .catch(() => {
-      parseXmlInvoice(INLINE_SAMPLE_XML);
-    });
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
 }
 
-function downloadSampleXmlFile() {
-  const blob = new Blob([INLINE_SAMPLE_XML], { type: 'application/xml;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = "HoaDonDienTu_Mau_0001289.xml";
-  a.click();
-  URL.revokeObjectURL(url);
-  alert('Đã tải file "HoaDonDienTu_Mau_0001289.xml" về máy của anh! Anh có thể kéo thả file này vào khung kiểm tra.');
-}
-
-function parseXmlInvoice(xmlText) {
+// Bóc tách dữ liệu từ chuỗi XML (Hỗ trợ chuẩn Thông tư 78, NĐ 123 & TT 32)
+function parseXmlInvoiceString(xmlText, fileName = "HoaDon.xml") {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
 
-    const getVal = (selector) => {
-      const el = xmlDoc.querySelector(selector);
-      return el ? el.textContent.trim() : '';
+    const getVal = (selectors) => {
+      const arr = Array.isArray(selectors) ? selectors : [selectors];
+      for (const sel of arr) {
+        const el = xmlDoc.querySelector(sel);
+        if (el && el.textContent.trim()) {
+          return el.textContent.trim();
+        }
+      }
+      return '';
     };
 
-    const title = getVal('THDon') || 'HÓA ĐƠN GIÁ TRỊ GIA TĂNG';
-    const khh = getVal('KHHDon') || getVal('KHMauHDon') || 'C26TAA';
-    const sh = getVal('SHDon') || '0001289';
-    const date = getVal('NLap') || new Date().toISOString().split('T')[0];
-    const currency = getVal('DVTTe') || 'VND';
+    const title = getVal(['THDon', 'InvoiceName', 'TenHDon']) || 'HÓA ĐƠN GIÁ TRỊ GIA TĂNG';
+    const khh = getVal(['KHHDon', 'KHMauHDon', 'InvoicePattern', 'MauSo']) || 'C26TAA';
+    const sh = getVal(['SHDon', 'InvoiceNo', 'SoHDon']) || '0001289';
+    const date = getVal(['NLap', 'InvoiceDate', 'NgayLap']) || new Date().toISOString().split('T')[0];
+    const currency = getVal(['DVTTe', 'Currency', 'LoaiTien']) || 'VND';
 
-    const sellerName = getVal('NBan > Ten') || getVal('NBan Ten') || 'Đơn vị bán hàng';
-    const sellerMst = getVal('NBan > MST') || getVal('NBan MST') || '0108923456';
-    const sellerAddress = getVal('NBan > DChi') || getVal('NBan DChi') || 'Chưa cập nhật';
-    const sellerBank = (getVal('NBan > STKNHang') ? `${getVal('NBan > STKNHang')} - ${getVal('NBan > TNHang')}` : 'Chưa cập nhật');
+    const sellerName = getVal(['NBan > Ten', 'NBan Ten', 'Seller LegalName', 'SellerName', 'NBan > TenDonVi']) || 'Đơn vị bán hàng';
+    const sellerMst = getVal(['NBan > MST', 'NBan MST', 'Seller TaxCode', 'SellerTaxCode']) || 'Chưa có MST';
+    const sellerAddress = getVal(['NBan > DChi', 'NBan DChi', 'Seller Address', 'SellerAddress']) || 'Chưa cập nhật';
+    const sellerBank = (getVal(['NBan > STKNHang', 'Seller BankAccount']) 
+      ? `${getVal(['NBan > STKNHang', 'Seller BankAccount'])} - ${getVal(['NBan > TNHang', 'Seller BankName'])}` 
+      : 'Chưa cập nhật');
 
-    const buyerName = getVal('NMua > Ten') || getVal('NMua Ten') || 'Đơn vị mua hàng';
-    const buyerMst = getVal('NMua > MST') || getVal('NMua MST') || '0317654321';
-    const buyerAddress = getVal('NMua > DChi') || getVal('NMua DChi') || 'Chưa cập nhật';
-    const buyerRep = getVal('NMua > HVTNMHang') || getVal('NMua HVTNMHang') || 'Chưa cập nhật';
+    const buyerName = getVal(['NMua > Ten', 'NMua Ten', 'Buyer LegalName', 'BuyerName', 'NMua > TenDonVi']) || 'Đơn vị mua hàng';
+    const buyerMst = getVal(['NMua > MST', 'NMua MST', 'Buyer TaxCode', 'BuyerTaxCode']) || '---';
+    const buyerAddress = getVal(['NMua > DChi', 'NMua DChi', 'Buyer Address', 'BuyerAddress']) || 'Chưa cập nhật';
+    const buyerRep = getVal(['NMua > HVTNMHang', 'Buyer ContactName', 'NMua HVTNMHang']) || 'Chưa cập nhật';
 
-    const subtotal = Number(getVal('TgTCThue')) || 0;
-    const tax = Number(getVal('TgTThue')) || 0;
-    const total = Number(getVal('TgTTTBSo')) || (subtotal + tax);
-    const totalWords = getVal('TgTTTBChu') || 'Không có thông tin bằng chữ';
+    let subtotal = Number(getVal(['TgTCThue', 'TotalBeforeTax', 'TongTienChuaThue'])) || 0;
+    let tax = Number(getVal(['TgTThue', 'TaxAmount', 'TongTienThue'])) || 0;
+    let total = Number(getVal(['TgTTTBSo', 'TotalAmount', 'TongTienThanhToan'])) || 0;
+    const totalWords = getVal(['TgTTTBChu', 'TotalAmountInWords', 'TongTienBangChu']) || 'Không có thông tin bằng chữ';
 
-    const itemNodes = xmlDoc.querySelectorAll('DSHHDVu > HHDVu, HHDVu');
+    const itemNodes = xmlDoc.querySelectorAll('DSHHDVu > HHDVu, HHDVu, InvoiceItem, Item');
     const items = [];
 
     itemNodes.forEach((node, index) => {
-      const name = node.querySelector('THHDVu')?.textContent?.trim();
+      const name = node.querySelector('THHDVu, ItemName, TenHang')?.textContent?.trim();
       if (!name) return;
-      const stt = node.querySelector('STT')?.textContent?.trim() || (index + 1);
-      const unit = node.querySelector('DVT')?.textContent?.trim() || 'Cái';
-      const qty = Number(node.querySelector('SLuong')?.textContent?.trim()) || 1;
-      const price = Number(node.querySelector('DGia')?.textContent?.trim()) || 0;
-      const amount = Number(node.querySelector('Tien')?.textContent?.trim()) || (qty * price);
-      const vatRate = node.querySelector('TSuat')?.textContent?.trim() || '10%';
+      const stt = node.querySelector('STT, LineNumber')?.textContent?.trim() || (index + 1);
+      const unit = node.querySelector('DVT, Unit, DonViTinh')?.textContent?.trim() || 'Cái';
+      const qty = Number(node.querySelector('SLuong, Quantity, SoLuong')?.textContent?.trim()) || 1;
+      const price = Number(node.querySelector('DGia, UnitPrice, DonGia')?.textContent?.trim()) || 0;
+      const amount = Number(node.querySelector('Tien, Amount, ThanhTien')?.textContent?.trim()) || (qty * price);
+      const vatRate = node.querySelector('TSuat, TaxRate, ThueSuat')?.textContent?.trim() || '10%';
 
       items.push({ stt, name, unit, qty, price, amount, vatRate });
     });
 
-    currentInvoiceData = {
+    if (total === 0 && subtotal === 0 && items.length > 0) {
+      subtotal = items.reduce((acc, it) => acc + it.amount, 0);
+      tax = Math.round(subtotal * 0.1);
+      total = subtotal + tax;
+    } else if (total === 0 && subtotal > 0) {
+      total = subtotal + tax;
+    }
+
+    return {
       title, khh, sh, date, currency,
       sellerName, sellerMst, sellerAddress, sellerBank,
       buyerName, buyerMst, buyerAddress, buyerRep,
-      subtotal, tax, total, totalWords, items
+      subtotal, tax, total, totalWords, items,
+      fileName,
+      rawXml: xmlText
     };
-
-    renderInvoiceUI(currentInvoiceData);
-
   } catch (err) {
-    alert('Không thể đọc file XML. Định dạng có thể chưa chuẩn hoặc bị hỏng.');
-    console.error(err);
+    console.error("Lỗi phân giải XML:", err);
+    return null;
   }
 }
 
+// Giữ tương thích với gọi hàm đơn lẻ
+function parseXmlInvoice(xmlText) {
+  const data = parseXmlInvoiceString(xmlText, "HoaDon_DonLe.xml");
+  if (!data) {
+    alert('Không thể đọc file XML. Định dạng có thể chưa chuẩn hoặc bị hỏng.');
+    return;
+  }
+  currentInvoiceData = data;
+  renderInvoiceUI(currentInvoiceData);
+}
+
+// Hiển thị giao diện hóa đơn đơn lẻ để xem chi tiết / in PDF
 function renderInvoiceUI(data) {
-  document.getElementById('invoice-placeholder').classList.add('hidden');
+  const placeholder = document.getElementById('invoice-placeholder');
+  const batchView = document.getElementById('xml-batch-view');
   const card = document.getElementById('printable-invoice');
-  card.classList.remove('hidden');
+
+  if (placeholder) placeholder.classList.add('hidden');
+  if (batchView) batchView.classList.add('hidden');
+  if (card) card.classList.remove('hidden');
 
   document.getElementById('inv-title').textContent = data.title;
   document.getElementById('inv-khh').textContent = data.khh;
@@ -328,10 +368,430 @@ function renderInvoiceUI(data) {
     tableBody.appendChild(tr);
   });
 
-  document.getElementById('inv-subtotal').textContent = `${data.subtotal.toLocaleString('vi-VN')} VND`;
-  document.getElementById('inv-tax').textContent = `${data.tax.toLocaleString('vi-VN')} VND`;
-  document.getElementById('inv-total').textContent = `${data.total.toLocaleString('vi-VN')} VND`;
+  document.getElementById('inv-subtotal').textContent = `${Math.round(data.subtotal).toLocaleString('vi-VN')} VND`;
+  document.getElementById('inv-tax').textContent = `${Math.round(data.tax).toLocaleString('vi-VN')} VND`;
+  document.getElementById('inv-total').textContent = `${Math.round(data.total).toLocaleString('vi-VN')} VND`;
   document.getElementById('inv-total-words').textContent = data.totalWords;
+
+  // Cập nhật nút quay lại bảng kê
+  const backBtn = document.getElementById('btn-back-to-batch');
+  if (backBtn) {
+    if (batchInvoices.length > 0) {
+      backBtn.classList.remove('hidden');
+    } else {
+      backBtn.classList.add('hidden');
+    }
+  }
+}
+
+// Hiển thị bảng kê hàng loạt & 4 Thẻ KPI
+function renderBatchInvoiceView(listToRender) {
+  const list = listToRender !== undefined ? listToRender : batchInvoices;
+  
+  const placeholder = document.getElementById('invoice-placeholder');
+  const batchView = document.getElementById('xml-batch-view');
+  const singleView = document.getElementById('printable-invoice');
+  const clearBtn = document.getElementById('xml-clear-btn');
+  const badge = document.getElementById('xml-total-loaded-badge');
+
+  if (badge) badge.textContent = batchInvoices.length;
+
+  if (batchInvoices.length === 0) {
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (batchView) batchView.classList.add('hidden');
+    if (singleView) singleView.classList.add('hidden');
+    if (clearBtn) clearBtn.classList.add('hidden');
+    return;
+  }
+
+  if (placeholder) placeholder.classList.add('hidden');
+  if (batchView) batchView.classList.remove('hidden');
+  if (singleView) singleView.classList.add('hidden');
+  if (clearBtn) clearBtn.classList.remove('hidden');
+
+  // Tính toán 4 Thẻ KPI Kế Toán
+  const totalCount = batchInvoices.length;
+  const sumSubtotal = batchInvoices.reduce((acc, cur) => acc + (cur.subtotal || 0), 0);
+  const sumTax = batchInvoices.reduce((acc, cur) => acc + (cur.tax || 0), 0);
+  const sumTotal = batchInvoices.reduce((acc, cur) => acc + (cur.total || 0), 0);
+
+  const kpiCount = document.getElementById('batch-kpi-count');
+  const kpiSubtotal = document.getElementById('batch-kpi-subtotal');
+  const kpiTax = document.getElementById('batch-kpi-tax');
+  const kpiTotal = document.getElementById('batch-kpi-total');
+
+  if (kpiCount) kpiCount.textContent = totalCount;
+  if (kpiSubtotal) kpiSubtotal.textContent = `${Math.round(sumSubtotal).toLocaleString('vi-VN')} đ`;
+  if (kpiTax) kpiTax.textContent = `${Math.round(sumTax).toLocaleString('vi-VN')} đ`;
+  if (kpiTotal) kpiTotal.textContent = `${Math.round(sumTotal).toLocaleString('vi-VN')} đ`;
+
+  // Render các dòng trong bảng
+  const tbody = document.getElementById('batch-invoices-tbody');
+  const showingCount = document.getElementById('batch-showing-count');
+  if (showingCount) showingCount.textContent = list.length;
+
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">Không tìm thấy hóa đơn nào khớp với từ khóa tìm kiếm.</td></tr>`;
+      return;
+    }
+
+    list.forEach((inv, idx) => {
+      const originalIdx = batchInvoices.indexOf(inv);
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/60 transition";
+      tr.innerHTML = `
+        <td class="py-2.5 px-2 text-center font-mono text-slate-400">${idx + 1}</td>
+        <td class="py-2.5 px-2 font-mono font-bold text-sky-600 dark:text-sky-400">${inv.sh || '---'}</td>
+        <td class="py-2.5 px-2 font-mono text-slate-500">${inv.khh || '---'}</td>
+        <td class="py-2.5 px-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">${inv.date || '---'}</td>
+        <td class="py-2.5 px-2 font-medium text-slate-900 dark:text-slate-100 max-w-[220px] truncate" title="${inv.sellerName}">${inv.sellerName}</td>
+        <td class="py-2.5 px-2 font-mono text-slate-600 dark:text-slate-400">${inv.sellerMst || '---'}</td>
+        <td class="py-2.5 px-2 text-right font-mono text-slate-700 dark:text-slate-300">${Math.round(inv.subtotal || 0).toLocaleString('vi-VN')} đ</td>
+        <td class="py-2.5 px-2 text-right font-mono text-amber-600 dark:text-amber-400">${Math.round(inv.tax || 0).toLocaleString('vi-VN')} đ</td>
+        <td class="py-2.5 px-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">${Math.round(inv.total || 0).toLocaleString('vi-VN')} đ</td>
+        <td class="py-2.5 px-2 text-center whitespace-nowrap">
+          <div class="flex items-center justify-center gap-1.5">
+            <button onclick="viewBatchInvoice(${originalIdx})" class="px-2 py-1 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 hover:bg-sky-100 font-bold text-[11px] transition flex items-center gap-1" title="Xem chi tiết & in">
+              <i class="ri-eye-line"></i> Xem
+            </button>
+            <button onclick="deleteBatchInvoice(${originalIdx})" class="p-1 rounded text-rose-400 hover:text-rose-600 transition" title="Xóa hóa đơn này">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+// Bộ lọc tìm kiếm thời gian thực
+function filterBatchInvoices(keyword) {
+  if (!keyword || !keyword.trim()) {
+    renderBatchInvoiceView(batchInvoices);
+    return;
+  }
+  const term = keyword.trim().toLowerCase();
+  const filtered = batchInvoices.filter(inv => 
+    (inv.sellerName && inv.sellerName.toLowerCase().includes(term)) ||
+    (inv.sellerMst && inv.sellerMst.toLowerCase().includes(term)) ||
+    (inv.sh && inv.sh.toLowerCase().includes(term)) ||
+    (inv.khh && inv.khh.toLowerCase().includes(term)) ||
+    (inv.buyerName && inv.buyerName.toLowerCase().includes(term))
+  );
+  renderBatchInvoiceView(filtered);
+}
+
+// Xem chi tiết một hóa đơn từ bảng kê
+function viewBatchInvoice(index) {
+  if (index < 0 || index >= batchInvoices.length) return;
+  currentInvoiceData = batchInvoices[index];
+  currentViewingInvoiceIndex = index;
+  renderInvoiceUI(currentInvoiceData);
+  window.scrollTo({ top: 150, behavior: 'smooth' });
+}
+
+// Quay lại chế độ bảng kê
+function backToBatchView() {
+  document.getElementById('printable-invoice')?.classList.add('hidden');
+  document.getElementById('xml-batch-view')?.classList.remove('hidden');
+  window.scrollTo({ top: 150, behavior: 'smooth' });
+}
+
+// Xóa 1 hóa đơn khỏi danh sách
+function deleteBatchInvoice(index) {
+  if (index >= 0 && index < batchInvoices.length) {
+    batchInvoices.splice(index, 1);
+    const searchVal = document.getElementById('batch-search-input')?.value;
+    if (searchVal) {
+      filterBatchInvoices(searchVal);
+    } else {
+      renderBatchInvoiceView();
+    }
+    showToast('Đã xóa hóa đơn khỏi bảng kê.');
+  }
+}
+
+// Xóa toàn bộ hóa đơn
+function clearAllBatchInvoices() {
+  if (batchInvoices.length > 0) {
+    if (!confirm('Anh có chắc muốn xóa toàn bộ danh sách hóa đơn hiện tại không?')) return;
+  }
+  batchInvoices = [];
+  currentInvoiceData = null;
+  const searchInput = document.getElementById('batch-search-input');
+  if (searchInput) searchInput.value = '';
+  renderBatchInvoiceView();
+  showToast('Đã làm trống bảng kê.');
+}
+
+// Xuất file Excel (.xlsx) chuẩn nghiệp vụ kế toán thuế bằng SheetJS
+function exportBatchInvoicesToExcel() {
+  if (!batchInvoices.length) {
+    alert('Chưa có hóa đơn nào trong bảng kê để xuất Excel.');
+    return;
+  }
+
+  if (typeof XLSX !== 'undefined') {
+    const wb = XLSX.utils.book_new();
+    
+    const wsData = [
+      ["BẢNG KÊ HÓA ĐƠN ĐIỆN TỬ (BÓC TÁCH TỰ ĐỘNG BẰNG ZENTOOL SUITE)"],
+      [`Thời gian xuất: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}`],
+      ["Cam kết bảo mật: 100% Client-Side RAM — Không tải dữ liệu lên bất kỳ máy chủ nào."],
+      [],
+      [
+        "STT",
+        "Số Hóa Đơn",
+        "Ký Hiệu Mẫu",
+        "Ngày Lập",
+        "Tên Đơn Vị Bán Hàng",
+        "Mã Số Thuế Bán",
+        "Địa Chỉ Người Bán",
+        "Tên Đơn Vị Mua Hàng",
+        "Mã Số Thuế Mua",
+        "Tiền Hàng (Chưa Thuế)",
+        "Tiền Thuế GTGT",
+        "Tổng Tiền Thanh Toán",
+        "Tên File Gốc"
+      ]
+    ];
+
+    let sumSubtotal = 0;
+    let sumTax = 0;
+    let sumTotal = 0;
+
+    batchInvoices.forEach((inv, idx) => {
+      const sub = Number(inv.subtotal) || 0;
+      const tx = Number(inv.tax) || 0;
+      const tot = Number(inv.total) || 0;
+
+      sumSubtotal += sub;
+      sumTax += tx;
+      sumTotal += tot;
+
+      wsData.push([
+        idx + 1,
+        inv.sh || "",
+        inv.khh || "",
+        inv.date || "",
+        inv.sellerName || "",
+        inv.sellerMst || "",
+        inv.sellerAddress || "",
+        inv.buyerName || "",
+        inv.buyerMst || "",
+        sub,
+        tx,
+        tot,
+        inv.fileName || ""
+      ]);
+    });
+
+    // Dòng tổng cộng
+    wsData.push([
+      "TỔNG CỘNG",
+      `${batchInvoices.length} Hóa đơn`,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      sumSubtotal,
+      sumTax,
+      sumTotal,
+      ""
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Căn chỉnh độ rộng các cột
+    ws['!cols'] = [
+      { wch: 6 },  // STT
+      { wch: 14 }, // Số HĐ
+      { wch: 12 }, // Ký hiệu
+      { wch: 12 }, // Ngày lập
+      { wch: 38 }, // Tên bán
+      { wch: 16 }, // MST Bán
+      { wch: 38 }, // Địa chỉ bán
+      { wch: 38 }, // Tên mua
+      { wch: 16 }, // MST Mua
+      { wch: 20 }, // Tiền hàng
+      { wch: 16 }, // Tiền thuế
+      { wch: 22 }, // Tổng thanh toán
+      { wch: 25 }  // Tên file
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "BangKeHoaDon_ZenTool");
+    XLSX.writeFile(wb, `Bang_Ke_Hoa_Don_Dien_Tu_ZENTOOL_${Date.now()}.xlsx`);
+    showToast('🎉 Đã xuất thành công file Excel Bảng Kê Hóa Đơn (.xlsx)!');
+  } else {
+    // Dự phòng xuất CSV UTF-8 kèm BOM
+    let csv = "\uFEFFSTT,Số Hóa Đơn,Ký Hiệu,Ngày Lập,Đơn Vị Bán Hàng,MST Bán,Đơn Vị Mua Hàng,MST Mua,Tiền Hàng,Tiền Thuế GTGT,Tổng Thanh Toán\n";
+    batchInvoices.forEach((inv, idx) => {
+      csv += `"${idx + 1}","${inv.sh}","${inv.khh}","${inv.date}","${(inv.sellerName||'').replace(/"/g, '""')}","${inv.sellerMst}","${(inv.buyerName||'').replace(/"/g, '""')}","${inv.buyerMst}",${inv.subtotal},${inv.tax},${inv.total}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bang_Ke_Hoa_Don_Dien_Tu_ZENTOOL_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Đã xuất file bảng kê CSV (UTF-8).');
+  }
+}
+
+// Nạp 5 Hóa Đơn Mẫu Doanh Nghiệp Thực Tế (Viettel, MISA, Petrolimex, FPT, VNPT)
+function loadSampleBatchInvoices() {
+  const sampleList = [
+    {
+      title: "HÓA ĐƠN GIÁ TRỊ GIA TĂNG",
+      khh: "1C26TNN",
+      sh: "0004521",
+      date: "2026-10-02",
+      currency: "VND",
+      sellerName: "TRUNG TÂM KINH DOANH VNPT - HÀ NỘI - CHI NHÁNH TỔNG CÔNG TY DỊCH VỤ VIỄN THÔNG",
+      sellerMst: "0106869738-002",
+      sellerAddress: "Số 75 Đinh Tiên Hoàng, Phường Tràng Tiền, Quận Hoàn Kiếm, TP Hà Nội",
+      sellerBank: "111000012345 - VietinBank CN Hà Nội",
+      buyerName: "CÔNG TY TNHH PHÁT TRIỂN THƯƠNG MẠI SỐ VIỆT GLOBAL",
+      buyerMst: "0317654321",
+      buyerAddress: "Số 188 Nguyễn Văn Cừ, Phường Bến Nghé, Quận 1, TP Hồ Chí Minh",
+      buyerRep: "Nguyễn Văn Hoàng",
+      subtotal: 4800000,
+      tax: 480000,
+      total: 5280000,
+      totalWords: "Năm triệu hai trăm tám mươi nghìn đồng chẵn",
+      items: [
+        { stt: 1, name: "Cước Dịch vụ Internet Cáp Quang FiberVNN Doanh nghiệp 500Mbps (Tháng 10/2026)", unit: "Gói", qty: 1, price: 3200000, amount: 3200000, vatRate: "10%" },
+        { stt: 2, name: "Dịch vụ Thuê địa chỉ IPv4 Tĩnh Doanh nghiệp (Tháng 10/2026)", unit: "IP", qty: 2, price: 800000, amount: 1600000, vatRate: "10%" }
+      ],
+      fileName: "VNPT_Internet_0004521.xml"
+    },
+    {
+      title: "HÓA ĐƠN GIÁ TRỊ GIA TĂNG",
+      khh: "1C26MAB",
+      sh: "0019842",
+      date: "2026-10-05",
+      currency: "VND",
+      sellerName: "CÔNG TY CỔ PHẦN MISA",
+      sellerMst: "0101243150",
+      sellerAddress: "Tầng 9, Tòa nhà Technosoft, Phố Duy Tân, Phường Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội",
+      sellerBank: "0021000123456 - Vietcombank CN Thăng Long",
+      buyerName: "CÔNG TY TNHH PHÁT TRIỂN THƯƠNG MẠI SỐ VIỆT GLOBAL",
+      buyerMst: "0317654321",
+      buyerAddress: "Số 188 Nguyễn Văn Cừ, Phường Bến Nghé, Quận 1, TP Hồ Chí Minh",
+      buyerRep: "Nguyễn Văn Hoàng",
+      subtotal: 3500000,
+      tax: 350000,
+      total: 3850000,
+      totalWords: "Ba triệu tám trăm năm mươi nghìn đồng chẵn",
+      items: [
+        { stt: 1, name: "Bản quyền Phần mềm Hóa đơn điện tử meInvoice - Gói 5.000 hóa đơn", unit: "Gói", qty: 1, price: 3500000, amount: 3500000, vatRate: "10%" }
+      ],
+      fileName: "MISA_meInvoice_0019842.xml"
+    },
+    {
+      title: "HÓA ĐƠN GIÁ TRỊ GIA TĂNG",
+      khh: "1C26PXX",
+      sh: "0087612",
+      date: "2026-10-09",
+      currency: "VND",
+      sellerName: "CÔNG TY XĂNG DẦU KHU VỰC I - TNHH MỘT THÀNH VIÊN (PETROLIMEX HÀ NỘI)",
+      sellerMst: "0100107694-001",
+      sellerAddress: "Số 1 Khâm Thiên, Phường Khâm Thiên, Quận Đống Đa, TP Hà Nội",
+      sellerBank: "0011000888999 - Vietcombank Sở Giao Dịch",
+      buyerName: "CÔNG TY TNHH PHÁT TRIỂN THƯƠNG MẠI SỐ VIỆT GLOBAL",
+      buyerMst: "0317654321",
+      buyerAddress: "Số 188 Nguyễn Văn Cừ, Phường Bến Nghé, Quận 1, TP Hồ Chí Minh",
+      buyerRep: "Nguyễn Văn Hoàng",
+      subtotal: 12600000,
+      tax: 1008000,
+      total: 13608000,
+      totalWords: "Mười ba triệu sáu trăm linh tám nghìn đồng chẵn",
+      items: [
+        { stt: 1, name: "Nhiên liệu Xăng RON 95-V Euro 5 phục vụ đội xe giao vận e-commerce", unit: "Lít", qty: 600, price: 21000, amount: 12600000, vatRate: "8%" }
+      ],
+      fileName: "Petrolimex_Xang_0087612.xml"
+    },
+    {
+      title: "HÓA ĐƠN GIÁ TRỊ GIA TĂNG",
+      khh: "1C26FAA",
+      sh: "0008320",
+      date: "2026-10-12",
+      currency: "VND",
+      sellerName: "CÔNG TY CỔ PHẦN VIỄN THÔNG FPT (FPT TELECOM)",
+      sellerMst: "0101778163",
+      sellerAddress: "Tòa nhà FPT, Phố Duy Tân, Phường Dịch Vọng Hậu, Quận Cầu Giấy, TP Hà Nội",
+      sellerBank: "1902000555666 - Techcombank CN Hà Nội",
+      buyerName: "CÔNG TY TNHH PHÁT TRIỂN THƯƠNG MẠI SỐ VIỆT GLOBAL",
+      buyerMst: "0317654321",
+      buyerAddress: "Số 188 Nguyễn Văn Cừ, Phường Bến Nghé, Quận 1, TP Hồ Chí Minh",
+      buyerRep: "Nguyễn Văn Hoàng",
+      subtotal: 18200000,
+      tax: 1820000,
+      total: 20020000,
+      totalWords: "Hai mươi triệu không trăm hai mươi nghìn đồng chẵn",
+      items: [
+        { stt: 1, name: "Thuê máy chủ ảo Cloud Server Enterprise (16 vCPU, 32GB RAM, 500GB NVMe) Q4/2026", unit: "Gói", qty: 1, price: 15000000, amount: 15000000, vatRate: "10%" },
+        { stt: 2, name: "Dịch vụ Sao lưu đám mây Cloud Backup tự động hàng ngày 1TB", unit: "Gói", qty: 1, price: 3200000, amount: 3200000, vatRate: "10%" }
+      ],
+      fileName: "FPT_CloudServer_0008320.xml"
+    },
+    {
+      title: "HÓA ĐƠN GIÁ TRỊ GIA TĂNG",
+      khh: "1C26VTT",
+      sh: "0023419",
+      date: "2026-10-14",
+      currency: "VND",
+      sellerName: "TẬP ĐOÀN CÔNG NGHIỆP - VIỄN THÔNG QUÂN ĐỘI (VIETTEL)",
+      sellerMst: "0100109106",
+      sellerAddress: "Lô D26 Khu đô thị mới Cầu Giấy, Phường Yên Hòa, Quận Cầu Giấy, TP Hà Nội",
+      sellerBank: "0011000000001 - MBBank Sở Giao Dịch",
+      buyerName: "CÔNG TY TNHH PHÁT TRIỂN THƯƠNG MẠI SỐ VIỆT GLOBAL",
+      buyerMst: "0317654321",
+      buyerAddress: "Số 188 Nguyễn Văn Cừ, Phường Bến Nghé, Quận 1, TP Hồ Chí Minh",
+      buyerRep: "Nguyễn Văn Hoàng",
+      subtotal: 2100000,
+      tax: 210000,
+      total: 2310000,
+      totalWords: "Hai triệu ba trăm mười nghìn đồng chẵn",
+      items: [
+        { stt: 1, name: "Gia hạn Chứng thư số Doanh nghiệp Viettel-CA USB Token (Thời hạn 03 năm)", unit: "Gói", qty: 1, price: 2100000, amount: 2100000, vatRate: "10%" }
+      ],
+      fileName: "Viettel_CA_0023419.xml"
+    }
+  ];
+
+  batchInvoices = [...sampleList];
+  renderBatchInvoiceView();
+  showToast("⚡ Đã nạp thành công 5 hóa đơn doanh nghiệp mẫu vào bảng kê!");
+}
+
+function loadSampleInvoice() {
+  fetch('/api/sample-invoice')
+    .then(res => res.text())
+    .then(xmlString => {
+      parseXmlInvoice(xmlString);
+    })
+    .catch(() => {
+      parseXmlInvoice(INLINE_SAMPLE_XML);
+    });
+}
+
+function downloadSampleXmlFile() {
+  const blob = new Blob([INLINE_SAMPLE_XML], { type: 'application/xml;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "HoaDonDienTu_Mau_0001289.xml";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Đã tải file "HoaDonDienTu_Mau_0001289.xml" về máy tính!');
 }
 
 function exportInvoiceCsv() {
@@ -352,6 +812,7 @@ function exportInvoiceCsv() {
   a.download = `BangKe_HoaDon_${currentInvoiceData.sh}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  showToast('Đã xuất file CSV chi tiết hàng hóa!');
 }
 
 // ============================================================
@@ -1107,8 +1568,411 @@ function generateDetailedAiAdvice(netProfit, netMargin, price, totalFees, ads, r
 }
 
 // ============================================================
-// PHÂN HỆ 4: NÉN ẢNH & TỐI ƯU TỐC ĐỘ (WEBP / JPG)
+// PHÂN HỆ 4: ĐỔI ẢNH HEIC IPHONE & NÉN ẢNH TỐI ƯU
 // ============================================================
+
+// Chuyển đổi giữa 2 phân nhóm: Đổi ảnh HEIC vs Nén ảnh WebP
+function switchMediaSubTab(subTab) {
+  const heicView = document.getElementById('media-heic-view');
+  const compressView = document.getElementById('media-compress-view');
+  const btnHeic = document.getElementById('media-subtab-heic');
+  const btnCompress = document.getElementById('media-subtab-compress');
+
+  if (subTab === 'heic') {
+    if (heicView) heicView.classList.remove('hidden');
+    if (compressView) compressView.classList.add('hidden');
+    if (btnHeic) {
+      btnHeic.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm";
+    }
+    if (btnCompress) {
+      btnCompress.className = "px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900";
+    }
+  } else {
+    if (heicView) heicView.classList.add('hidden');
+    if (compressView) compressView.classList.remove('hidden');
+    if (btnCompress) {
+      btnCompress.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm";
+    }
+    if (btnHeic) {
+      btnHeic.className = "px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900";
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// TÍNH NĂNG 1: CHUYỂN ĐỔI ẢNH HEIC HÀNG LOẠT (CLIENT-SIDE IN RAM)
+// ------------------------------------------------------------
+
+async function handleHeicBatchUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+
+  const targetFormat = document.getElementById('heic-format-select')?.value || 'image/jpeg';
+  const targetQuality = Number(document.getElementById('heic-quality-select')?.value) || 0.8;
+  const targetExt = targetFormat === 'image/jpeg' ? 'jpg' : (targetFormat === 'image/webp' ? 'webp' : 'png');
+
+  const progressBox = document.getElementById('heic-progress-box');
+  const progressBar = document.getElementById('heic-progress-bar');
+  const progressLabel = document.getElementById('heic-progress-label');
+  const progressPercent = document.getElementById('heic-progress-percent');
+  const placeholder = document.getElementById('heic-placeholder');
+  const resultsContainer = document.getElementById('heic-results-container');
+
+  if (placeholder) placeholder.classList.add('hidden');
+  if (resultsContainer) resultsContainer.classList.add('hidden');
+  if (progressBox) progressBox.classList.remove('hidden');
+
+  let successCount = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const pct = Math.round(((i) / files.length) * 100);
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressPercent) progressPercent.textContent = `${pct}%`;
+    if (progressLabel) progressLabel.textContent = `Đang giải mã ảnh (${i + 1}/${files.length}): ${file.name}...`;
+
+    try {
+      let convertedBlob = null;
+      // Thử giải mã qua heic2any nếu có sẵn
+      if (typeof heic2any !== 'undefined') {
+        try {
+          const res = await heic2any({
+            blob: file,
+            toType: targetFormat,
+            quality: targetQuality
+          });
+          convertedBlob = Array.isArray(res) ? res[0] : res;
+        } catch (hErr) {
+          console.warn("heic2any cảnh báo, thử canvas fallback:", hErr);
+          convertedBlob = await convertFileViaCanvasFallback(file, targetFormat, targetQuality);
+        }
+      } else {
+        convertedBlob = await convertFileViaCanvasFallback(file, targetFormat, targetQuality);
+      }
+
+      if (convertedBlob) {
+        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const outFileName = `${baseName}_converted.${targetExt}`;
+        const objectUrl = URL.createObjectURL(convertedBlob);
+
+        convertedHeicFiles.push({
+          origName: file.name,
+          origSize: file.size,
+          outName: outFileName,
+          blob: convertedBlob,
+          size: convertedBlob.size,
+          url: objectUrl,
+          ext: targetExt,
+          formatName: targetExt.toUpperCase()
+        });
+        successCount++;
+      }
+    } catch (err) {
+      console.error("Không thể chuyển đổi file:", file.name, err);
+    }
+  }
+
+  if (progressBar) progressBar.style.width = '100%';
+  if (progressPercent) progressPercent.textContent = '100%';
+  if (progressLabel) progressLabel.textContent = `Hoàn tất chuyển đổi ${successCount}/${files.length} ảnh!`;
+
+  setTimeout(() => {
+    if (progressBox) progressBox.classList.add('hidden');
+    renderHeicResultsList();
+    if (successCount > 0) {
+      showToast(`🎉 Đã chuyển đổi thành công ${successCount} ảnh iPhone sang ${targetExt.toUpperCase()}!`);
+    } else {
+      alert("Không thể chuyển đổi các file đã chọn. Vui lòng kiểm tra lại định dạng file .heic/.heif.");
+    }
+  }, 400);
+
+  event.target.value = '';
+}
+
+// Fallback xử lý file ảnh bằng HTML5 Canvas nếu heic2any gặp file ảnh thường
+function convertFileViaCanvasFallback(file, targetFormat, targetQuality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Canvas toBlob failed"));
+        }, targetFormat, targetQuality);
+      };
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Thử nghiệm nhanh chuyển đổi 3 ảnh mẫu thực tế với 1 click
+async function loadSampleHeicTest() {
+  const progressBox = document.getElementById('heic-progress-box');
+  const progressBar = document.getElementById('heic-progress-bar');
+  const progressLabel = document.getElementById('heic-progress-label');
+  const progressPercent = document.getElementById('heic-progress-percent');
+  const placeholder = document.getElementById('heic-placeholder');
+  const resultsContainer = document.getElementById('heic-results-container');
+
+  if (placeholder) placeholder.classList.add('hidden');
+  if (resultsContainer) resultsContainer.classList.add('hidden');
+  if (progressBox) progressBox.classList.remove('hidden');
+
+  const targetFormat = document.getElementById('heic-format-select')?.value || 'image/jpeg';
+  const targetQuality = Number(document.getElementById('heic-quality-select')?.value) || 0.8;
+  const targetExt = targetFormat === 'image/jpeg' ? 'jpg' : (targetFormat === 'image/webp' ? 'webp' : 'png');
+
+  // Sinh 3 ảnh canvas độ phân giải cao mô phỏng ảnh iPhone
+  const samples = [
+    {
+      title: "IMG_4821_iPhone16Pro_SanPhamShopee.heic",
+      theme: "fashion",
+      tag: "Ảnh chụp sản phẩm mẫu (Shopee Live)",
+      origSize: 4.8 * 1024 * 1024
+    },
+    {
+      title: "IMG_4822_iPhone16Pro_ChungTuThue.heic",
+      theme: "doc",
+      tag: "Ảnh chụp chứng từ hóa đơn kế toán",
+      origSize: 3.9 * 1024 * 1024
+    },
+    {
+      title: "IMG_4823_iPhone16Pro_KienHangKho.heic",
+      theme: "package",
+      tag: "Ảnh kiểm tra đóng gói kiện hàng",
+      origSize: 5.2 * 1024 * 1024
+    }
+  ];
+
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const pct = Math.round(((i + 1) / samples.length) * 100);
+    if (progressBar) progressBar.style.width = `${pct}%`;
+    if (progressPercent) progressPercent.textContent = `${pct}%`;
+    if (progressLabel) progressLabel.textContent = `Đang mô phỏng giải mã (${i + 1}/3): ${s.title}...`;
+
+    // Tạo canvas vẽ ảnh mô phỏng đẹp mắt
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 800;
+    const ctx = canvas.getContext('2d');
+
+    if (s.theme === 'fashion') {
+      const grad = ctx.createLinearGradient(0, 0, 1200, 800);
+      grad.addColorStop(0, '#f43f5e');
+      grad.addColorStop(1, '#8b5cf6');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1200, 800);
+    } else if (s.theme === 'doc') {
+      const grad = ctx.createLinearGradient(0, 0, 1200, 800);
+      grad.addColorStop(0, '#0284c7');
+      grad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1200, 800);
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, 1200, 800);
+      grad.addColorStop(0, '#10b981');
+      grad.addColorStop(1, '#065f46');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1200, 800);
+    }
+
+    // Khung viền và thẻ nội dung
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.lineWidth = 10;
+    ctx.strokeRect(30, 30, 1140, 740);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 44px 'Plus Jakarta Sans', sans-serif";
+    ctx.fillText("ZenTool HEIC Converter Engine", 80, 140);
+
+    ctx.font = "bold 32px 'Plus Jakarta Sans', sans-serif";
+    ctx.fillStyle = "#fef08a";
+    ctx.fillText(s.tag, 80, 210);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.font = "24px 'Plus Jakarta Sans', sans-serif";
+    ctx.fillText(`Tên file gốc: ${s.title}`, 80, 300);
+    ctx.fillText(`Chuẩn cảm biến: Apple iPhone 16 Pro Max — 48MP HEIF/HEIC`, 80, 350);
+    ctx.fillText(`Độ phân giải xuất: 1200 x 800 px (Chuẩn nét cao)`, 80, 400);
+    ctx.fillText(`Dung lượng gốc iPhone: ${(s.origSize / (1024 * 1024)).toFixed(1)} MB`, 80, 450);
+    ctx.fillText(`Bảo mật: 100% Xử lý Client-Side trong RAM — Zero Server Upload`, 80, 500);
+
+    // Dấu Watermark chất lượng
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.font = "bold 80px 'Plus Jakarta Sans', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ZENTOOL VERIFIED", 600, 680);
+    ctx.textAlign = "left";
+
+    // Xuất ra Blob
+    const blob = await new Promise(res => canvas.toBlob(res, targetFormat, targetQuality));
+    const baseName = s.title.substring(0, s.title.lastIndexOf('.'));
+    const outFileName = `${baseName}_converted.${targetExt}`;
+    const objectUrl = URL.createObjectURL(blob);
+
+    convertedHeicFiles.push({
+      origName: s.title,
+      origSize: s.origSize,
+      outName: outFileName,
+      blob: blob,
+      size: blob.size,
+      url: objectUrl,
+      ext: targetExt,
+      formatName: targetExt.toUpperCase()
+    });
+
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  setTimeout(() => {
+    if (progressBox) progressBox.classList.add('hidden');
+    renderHeicResultsList();
+    showToast("⚡ Đã chuyển đổi thành công 3 ảnh iPhone mẫu sang JPG siêu nét!");
+  }, 300);
+}
+
+// Hiển thị danh sách các thẻ ảnh đã chuyển đổi
+function renderHeicResultsList() {
+  const placeholder = document.getElementById('heic-placeholder');
+  const resultsContainer = document.getElementById('heic-results-container');
+  const cardsList = document.getElementById('heic-cards-list');
+  const countBadge = document.getElementById('heic-converted-count');
+
+  if (countBadge) countBadge.textContent = convertedHeicFiles.length;
+
+  if (convertedHeicFiles.length === 0) {
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (resultsContainer) resultsContainer.classList.add('hidden');
+    return;
+  }
+
+  if (placeholder) placeholder.classList.add('hidden');
+  if (resultsContainer) resultsContainer.classList.remove('hidden');
+
+  if (cardsList) {
+    cardsList.innerHTML = '';
+    convertedHeicFiles.forEach((item, index) => {
+      const origSizeMb = (item.origSize / (1024 * 1024)).toFixed(2);
+      const newSizeKb = (item.size / 1024).toFixed(1);
+      const savedPercent = item.origSize > 0 
+        ? Math.max(0, Math.round((1 - (item.size / item.origSize)) * 100)) 
+        : 0;
+
+      const card = document.createElement('div');
+      card.className = "flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-purple-300 dark:hover:border-purple-700 transition gap-3";
+      card.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0">
+          <img src="${item.url}" class="w-14 h-14 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800" alt="Thumbnail">
+          <div class="min-w-0">
+            <h5 class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate" title="${item.outName}">
+              ${item.outName}
+            </h5>
+            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+              <span>Gốc: <strong class="text-slate-700 dark:text-slate-300">${origSizeMb} MB</strong></span>
+              <span>➔</span>
+              <span>Đã đổi: <strong class="text-purple-600 dark:text-purple-400 font-mono">${newSizeKb} KB</strong></span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                Giảm -${savedPercent}%
+              </span>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                ${item.formatName}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button onclick="downloadSingleHeic(${index})" class="px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-xs transition flex items-center gap-1 shadow-sm">
+            <i class="ri-download-2-line"></i> <span class="hidden sm:inline">Tải Về</span>
+          </button>
+          <button onclick="deleteSingleHeic(${index})" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition" title="Xóa ảnh này">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+        </div>
+      `;
+      cardsList.appendChild(card);
+    });
+  }
+}
+
+// Tải 1 ảnh lẻ
+function downloadSingleHeic(index) {
+  const item = convertedHeicFiles[index];
+  if (!item) return;
+  const a = document.createElement('a');
+  a.href = item.url;
+  a.download = item.outName;
+  a.click();
+  showToast(`Đã tải ảnh "${item.outName}"!`);
+}
+
+// Xóa 1 ảnh khỏi danh sách
+function deleteSingleHeic(index) {
+  if (index >= 0 && index < convertedHeicFiles.length) {
+    const item = convertedHeicFiles[index];
+    URL.revokeObjectURL(item.url);
+    convertedHeicFiles.splice(index, 1);
+    renderHeicResultsList();
+    showToast('Đã xóa ảnh.');
+  }
+}
+
+// Tải toàn bộ ảnh thành file ZIP
+async function downloadAllHeicZip() {
+  if (!convertedHeicFiles.length) {
+    alert('Chưa có ảnh nào được chuyển đổi để tải.');
+    return;
+  }
+
+  if (typeof JSZip !== 'undefined') {
+    const zip = new JSZip();
+    const folder = zip.folder("ZenTool_Anh_Da_Chuyen_Doi");
+    convertedHeicFiles.forEach(item => {
+      folder.file(item.outName, item.blob);
+    });
+
+    showToast('Đang đóng gói file ZIP...');
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ZenTool_Anh_Chuyen_Doi_All_${Date.now()}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📦 Đã tải trọn bộ file ZIP thành công!');
+  } else {
+    // Dự phòng tải từng file tuần tự
+    convertedHeicFiles.forEach((item, idx) => {
+      setTimeout(() => downloadSingleHeic(idx), idx * 250);
+    });
+    showToast('Đang tải từng ảnh xuống máy tính...');
+  }
+}
+
+// Xóa toàn bộ ảnh đã chuyển đổi
+function clearAllHeicFiles() {
+  if (convertedHeicFiles.length > 0) {
+    if (!confirm('Anh có chắc muốn xóa toàn bộ danh sách ảnh đã chuyển đổi không?')) return;
+  }
+  convertedHeicFiles.forEach(it => URL.revokeObjectURL(it.url));
+  convertedHeicFiles = [];
+  renderHeicResultsList();
+  showToast('Đã xóa toàn bộ ảnh.');
+}
+
+// ------------------------------------------------------------
+// TÍNH NĂNG 2: NÉN ẢNH & TỐI ƯU TỐC ĐỘ (WEBP / JPG)
+// ------------------------------------------------------------
 
 function initCompressSample() {
   const canvas = document.getElementById('media-canvas');

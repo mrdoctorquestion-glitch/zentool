@@ -37,6 +37,15 @@
       document.write('<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"><\/script>');
     }
   </script>
+  
+  <!-- SheetJS (xlsx) for Client-Side Excel Exporting -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- JSZip for Client-Side Zip Creation (Tải hàng loạt ảnh) -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- heic2any for Client-Side iPhone HEIC/HEIF Image Conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col">
 
@@ -63,7 +72,7 @@
       <!-- Navigation Tabs (Desktop) -->
       <nav class="hidden md:flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
         <button id="nav-invoice" onclick="switchTab('invoice')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all bg-white dark:bg-slate-700 shadow-sm text-sky-600 dark:text-sky-300">
-          <i class="ri-file-text-line"></i> Đọc Hóa Đơn XML
+          <i class="ri-file-text-line"></i> Đọc & Gom Hóa Đơn XML
         </button>
         <button id="nav-files" onclick="switchTab('files')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900">
           <i class="ri-folder-zip-line"></i> Ghép File & Tiện Ích Văn Phòng
@@ -72,7 +81,7 @@
           <i class="ri-calculator-line"></i> Lợi Nhuận Sàn & Thuế 2026
         </button>
         <button id="nav-media" onclick="switchTab('media')" class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900">
-          <i class="ri-image-edit-line"></i> Nén Ảnh Tối Ưu Tốc Độ
+          <i class="ri-image-edit-line"></i> Đổi Ảnh HEIC & Nén Ảnh
         </button>
       </nav>
 
@@ -94,7 +103,7 @@
       <button onclick="switchTab('invoice')" class="px-2 py-1 font-bold text-sky-600">Hóa Đơn XML</button>
       <button onclick="switchTab('files')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Ghép File & Tiện Ích</button>
       <button onclick="switchTab('profit')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Lãi Sàn & Thuế</button>
-      <button onclick="switchTab('media')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Nén Ảnh</button>
+      <button onclick="switchTab('media')" class="px-2 py-1 font-semibold text-slate-600 dark:text-slate-300">Đổi Ảnh HEIC</button>
     </div>
   </header>
 
@@ -134,20 +143,23 @@
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800 no-print">
         <div>
           <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-            <i class="ri-file-text-line text-sky-600"></i> Trình Đọc & Bóc Tách Hóa Đơn Điện Tử XML
+            <i class="ri-file-text-line text-sky-600"></i> Đọc & Gom Bảng Kê Hóa Đơn Điện Tử XML Hàng Loạt
           </h1>
           <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Mở file XML hóa đơn điện tử của Tổng Cục Thuế, VNPT, Viettel, MISA, BKAV ngay trên trình duyệt mà không cần cài phần mềm nặng nề.
+            Kéo thả 50 - 100 file XML cùng lúc để bóc tách thông tin và tự động xuất ra Bảng Kê Excel (.xlsx) chuẩn thuế. 100% trong RAM máy tính.
           </p>
         </div>
         
-        <!-- YÊU CẦU 1: 2 NÚT TẢI FILE MẪU & XEM MẪU -->
+        <!-- Nút Tải Mẫu & Thử Nghiệm -->
         <div class="flex flex-wrap items-center gap-2">
           <button onclick="downloadSampleXmlFile()" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 shadow-sm">
-            <i class="ri-download-2-line text-sky-600"></i> Tải File XML Mẫu Về Máy
+            <i class="ri-download-2-line text-sky-600"></i> Tải 1 File XML Mẫu
           </button>
-          <button onclick="loadSampleInvoice()" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/20 transition flex items-center gap-1.5">
-            <i class="ri-magic-line"></i> ⚡ Xem Thử Hóa Đơn Mẫu
+          <button onclick="loadSampleInvoice()" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 shadow-sm">
+            <i class="ri-eye-line text-sky-600"></i> Xem 1 Hóa Đơn Mẫu
+          </button>
+          <button onclick="loadSampleBatchInvoices()" class="px-3.5 py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/20 transition flex items-center gap-1.5">
+            <i class="ri-magic-line"></i> ⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu
           </button>
         </div>
       </div>
@@ -159,42 +171,126 @@
         <div class="lg:col-span-4 space-y-4 no-print">
           <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-              <i class="ri-upload-cloud-2-line text-sky-500 text-base"></i> Tải Lên Hóa Đơn Của Bạn
+              <i class="ri-upload-cloud-2-line text-sky-500 text-base"></i> Tải Lên Hóa Đơn XML (Đơn Lẻ hoặc Hàng Loạt)
             </h3>
             
             <div onclick="document.getElementById('xml-file-input').click()" 
                  class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-sky-500 rounded-xl p-8 text-center cursor-pointer transition bg-slate-50/50 dark:bg-slate-800/40">
               <i class="ri-file-code-line text-4xl text-sky-500 mb-2 block"></i>
-              <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả file .XML vào đây</p>
-              <p class="text-[11px] text-slate-400 mt-1">Hoặc bấm để chọn file từ máy tính của bạn</p>
-              <input type="file" id="xml-file-input" accept=".xml" class="hidden" onchange="handleXmlUpload(event)">
+              <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả các file .XML vào đây</p>
+              <p class="text-[11px] text-slate-400 mt-1">Hỗ trợ chọn nhiều file cùng lúc (hoặc 1 file đơn)</p>
+              <input type="file" id="xml-file-input" accept=".xml" multiple class="hidden" onchange="handleXmlUpload(event)">
             </div>
 
-            <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs space-y-1.5 text-slate-500 dark:text-slate-400">
-              <p class="font-bold text-slate-700 dark:text-slate-300">💡 Hướng dẫn kiểm tra:</p>
-              <p>1. Nếu chưa có sẵn file XML, bấm nút <strong>"Tải File XML Mẫu Về Máy"</strong> ở trên.</p>
-              <p>2. Kéo file vừa tải thả vào ô trên để kiểm tra kết quả tức thì.</p>
+            <div class="mt-4 flex items-center justify-between text-xs">
+              <span class="text-slate-500">Đã nạp: <strong id="xml-total-loaded-badge" class="text-sky-600 font-bold">0</strong> file</span>
+              <button onclick="clearAllBatchInvoices()" id="xml-clear-btn" class="hidden text-rose-500 hover:text-rose-700 font-bold text-[11px] flex items-center gap-1">
+                <i class="ri-delete-bin-line"></i> Xóa tất cả
+              </button>
+            </div>
+
+            <div class="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs space-y-1.5 text-slate-500 dark:text-slate-400">
+              <p class="font-bold text-slate-700 dark:text-slate-300">💡 Hướng dẫn nhanh:</p>
+              <p>• Kéo thả 1 hoặc nhiều file XML vào ô trên để bóc tách ngay.</p>
+              <p>• Bấm <strong>"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu"</strong> để trải nghiệm bảng kê kế toán mẫu tức thì.</p>
+              <p>• 1-Click xuất ra file Excel chuẩn để kê khai thuế.</p>
             </div>
           </div>
         </div>
 
-        <!-- Invoice Details View & Print Area (8 Cols) -->
+        <!-- Invoice Details View & Batch Summary Area (8 Cols) -->
         <div class="lg:col-span-8 space-y-4">
           
+          <!-- Placeholder when no invoice loaded -->
           <div id="invoice-placeholder" class="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-slate-200 dark:border-slate-800 text-center text-slate-400">
             <i class="ri-file-search-line text-5xl text-slate-300 dark:text-slate-700 mb-3 block"></i>
             <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">Chưa có hóa đơn nào được tải</h4>
-            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Vui lòng tải lên file hóa đơn điện tử .XML hoặc nhấn vào nút <strong>"⚡ Xem Thử Hóa Đơn Mẫu"</strong> để trải nghiệm.</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Vui lòng kéo thả các file .XML vào khung bên trái hoặc bấm vào nút <strong>"⚡ Thử Bảng Kê 5 Hóa Đơn Mẫu"</strong> ở góc trên.</p>
+          </div>
+
+          <!-- BATCH VIEW: BẢNG KÊ HÀNG LOẠT VÀ TỔNG HỢP EXCEL -->
+          <div id="xml-batch-view" class="hidden space-y-4">
+            
+            <!-- 4 Thẻ KPI Tổng Quan Kế Toán -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span class="text-[11px] font-bold text-slate-500 block mb-0.5">Tổng Số Hóa Đơn</span>
+                <span id="batch-kpi-count" class="text-xl font-black text-sky-600 dark:text-sky-400 font-mono">0</span>
+              </div>
+              <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span class="text-[11px] font-bold text-slate-500 block mb-0.5">Tiền Hàng (Chưa Thuế)</span>
+                <span id="batch-kpi-subtotal" class="text-sm sm:text-base font-black text-slate-800 dark:text-slate-200 font-mono">0 đ</span>
+              </div>
+              <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span class="text-[11px] font-bold text-slate-500 block mb-0.5">Tiền Thuế GTGT</span>
+                <span id="batch-kpi-tax" class="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono">0 đ</span>
+              </div>
+              <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span class="text-[11px] font-bold text-slate-500 block mb-0.5">Tổng Thanh Toán</span>
+                <span id="batch-kpi-total" class="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">0 đ</span>
+              </div>
+            </div>
+
+            <!-- Toolbar Bảng Kê -->
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+              <div class="relative flex-1">
+                <i class="ri-search-line absolute left-3 top-2.5 text-slate-400"></i>
+                <input type="text" id="batch-search-input" oninput="filterBatchInvoices(this.value)" placeholder="Lọc theo Tên người bán, MST, Số hóa đơn..." class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500">
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="exportBatchInvoicesToExcel()" class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20">
+                  <i class="ri-file-excel-line text-sm"></i> Xuất Bảng Kê Excel (.xlsx)
+                </button>
+                <button onclick="clearAllBatchInvoices()" class="px-3 py-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/40 font-bold transition flex items-center gap-1" title="Xóa toàn bộ">
+                  <i class="ri-delete-bin-line"></i> Xóa Hết
+                </button>
+              </div>
+            </div>
+
+            <!-- Bảng Dữ Liệu Bảng Kê -->
+            <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto max-h-[460px]">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead class="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 z-10 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th class="py-2.5 px-2 text-center w-8">STT</th>
+                      <th class="py-2.5 px-2 font-bold">Số HĐ</th>
+                      <th class="py-2.5 px-2">Ký Hiệu</th>
+                      <th class="py-2.5 px-2">Ngày Lập</th>
+                      <th class="py-2.5 px-2 font-bold">Đơn Vị Bán Hàng</th>
+                      <th class="py-2.5 px-2">MST Bán</th>
+                      <th class="py-2.5 px-2 text-right">Tiền Hàng</th>
+                      <th class="py-2.5 px-2 text-right">Thuế VAT</th>
+                      <th class="py-2.5 px-2 text-right font-bold">Tổng Thanh Toán</th>
+                      <th class="py-2.5 px-2 text-center w-20">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="batch-invoices-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+              <div class="p-2.5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                <span>Hiển thị <strong id="batch-showing-count" class="text-slate-700 dark:text-slate-300">0</strong> hóa đơn</span>
+                <span class="italic">Bấm "Xem" để mở bản in chi tiết từng hóa đơn</span>
+              </div>
+            </div>
+
           </div>
 
           <!-- Printable Invoice Card (Rendered on load) -->
           <div id="printable-invoice" class="hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
             
             <!-- Actions Toolbar (No print) -->
-            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-200 dark:border-slate-800 no-print">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
-                <i class="ri-checkbox-circle-fill"></i> Chữ Ký Số Hợp Lệ (VNPT-CA)
-              </span>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-200 dark:border-slate-800 no-print">
+              <div class="flex items-center gap-2">
+                <button onclick="backToBatchView()" id="btn-back-to-batch" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition flex items-center gap-1.5 shadow-sm">
+                  <i class="ri-arrow-left-line text-sm"></i> <span>Quay Lại Bảng Kê</span>
+                </button>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400">
+                  <i class="ri-checkbox-circle-fill"></i> Chữ Ký Số Hợp Lệ
+                </span>
+              </div>
               <div class="flex items-center gap-2">
                 <button onclick="exportInvoiceCsv()" class="px-3.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
                   <i class="ri-file-excel-line text-emerald-600 text-sm"></i> Xuất Bảng Kê Excel
@@ -736,105 +832,251 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- PHÂN HỆ 4: NÉN ẢNH TỐI ƯU TỐC ĐỘ (YÊU CẦU 4 GIẢI THÍCH RÕ RÀNG) -->
+    <!-- PHÂN HỆ 4: ĐỔI ẢNH HEIC IPHONE & NÉN ẢNH TỐI ƯU (NÂNG CẤP MẠNH)-->
     <!-- ============================================================ -->
     <div id="tab-media" class="tab-content space-y-6 hidden">
       
-      <!-- GIẢI THÍCH CHI TIẾT TẠI SAO CẦN NÉN ẢNH (YÊU CẦU 4) -->
-      <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <h2 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-          <i class="ri-questionnaire-line text-purple-600"></i> Tại Sao Bạn Cần Nén Ảnh? Tính Năng Này Giúp Gì Cho Bạn?
-        </h2>
-        
-        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Nhiều người thắc mắc: <em>"Ảnh chụp từ điện thoại nét căng thì cứ để nguyên đăng lên, tại sao phải nén làm gì?"</em>. Thực tế, một bức ảnh chụp điện thoại thường nặng từ <strong>5MB đến 15MB</strong>. Dung lượng quá nặng này chính là thủ phạm gây ra 4 rắc rối lớn hàng ngày:
-        </p>
+      <!-- Sub-Tab Navigation Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="ri-image-edit-line text-purple-600"></i> Xử Lý Ảnh Chuyên Nghiệp: Đổi Ảnh HEIC (iPhone) & Nén Ảnh
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Chuyển đổi hàng loạt ảnh .HEIC từ iPhone sang JPG/PNG trong 2 giây & nén WebP siêu nhẹ. 100% trong RAM máy tính.
+          </p>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div class="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 space-y-1">
-            <h4 class="font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
-              <i class="ri-speed-line text-purple-600"></i> 1. Tăng Tốc Độ Mở Trang Web Gấp 5 Lần
-            </h4>
-            <p class="text-slate-600 dark:text-slate-300">
-              Khách hàng lướt web trên điện thoại nếu ảnh load quá 3 giây họ sẽ tắt ngay lập tức. Nén ảnh giúp trang web mở ra trong tích tắc, giữ chân khách mua hàng.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 space-y-1">
-            <h4 class="font-bold text-sky-900 dark:text-sky-200 flex items-center gap-1.5">
-              <i class="ri-mail-send-line text-sky-600"></i> 2. Gửi Email Không Bị Báo Lỗi Vượt 25MB
-            </h4>
-            <p class="text-slate-600 dark:text-slate-300">
-              Hòm thư Gmail hay Outlook thường giới hạn file đính kèm dưới 25MB. Đính kèm 3 bức ảnh gốc là hòm thư báo lỗi không gửi được. Nén ảnh giúp bạn gửi cả chục ảnh nhẹ nhàng.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 space-y-1">
-            <h4 class="font-bold text-orange-900 dark:text-orange-200 flex items-center gap-1.5">
-              <i class="ri-shopping-cart-line text-orange-600"></i> 3. Đăng Bán Trên Shopee & TikTok Shop Không Bị Từ Chối
-            </h4>
-            <p class="text-slate-600 dark:text-slate-300">
-              Các sàn thương mại điện tử yêu cầu ảnh tải lên phải dưới 1MB - 2MB. Ảnh nén sang chuẩn <strong>WebP</strong> giữ nguyên độ sắc nét nhưng dung lượng giảm tới 80%, sàn duyệt ngay lập tức.
-            </p>
-          </div>
-
-          <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-1">
-            <h4 class="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
-              <i class="ri-hard-drive-2-line text-emerald-600"></i> 4. Tiết Kiệm Dung Lượng Ổ Cứng & Google Drive
-            </h4>
-            <p class="text-slate-600 dark:text-slate-300">
-              Lưu trữ 1.000 ảnh gốc tốn 10GB dung lượng máy. Sau khi nén chỉ còn chưa tới 1.5GB, không bao giờ phải lo máy tính bị báo đầy bộ nhớ.
-            </p>
-          </div>
+        <!-- Segmented Tab Switcher -->
+        <div class="flex items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs self-start sm:self-auto">
+          <button id="media-subtab-heic" onclick="switchMediaSubTab('heic')" class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm">
+            <i class="ri-apple-line text-sm"></i> <span>Đổi Ảnh HEIC (iPhone)</span>
+          </button>
+          <button id="media-subtab-compress" onclick="switchMediaSubTab('compress')" class="px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900">
+            <i class="ri-speed-line text-sm"></i> <span>Nén Ảnh WebP</span>
+          </button>
         </div>
       </div>
 
-      <!-- Compressor Tool -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <!-- ============================================================ -->
+      <!-- VIEW 1: CHUYỂN ĐỔI ẢNH HEIC SANG JPG/PNG HÀNG LOẠT           -->
+      <!-- ============================================================ -->
+      <div id="media-heic-view" class="space-y-6">
         
-        <div class="lg:col-span-5 space-y-4">
-          <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            
-            <div onclick="document.getElementById('compress-file-input').click()" class="border-2 border-dashed border-purple-300 dark:border-purple-800 hover:border-purple-500 rounded-xl p-6 text-center cursor-pointer transition bg-purple-50/30 dark:bg-purple-950/20">
-              <i class="ri-image-add-line text-4xl text-purple-500 mb-2 block"></i>
-              <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả ảnh vào đây để nén</p>
-              <p class="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, WEBP dung lượng tối đa 25MB</p>
-              <input type="file" id="compress-file-input" accept="image/*" class="hidden" onchange="handleImageCompressUpload(event)">
+        <!-- GIẢI THÍCH NỖI ĐAU THỰC TẾ CỦA ẢNH HEIC IPHONE -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-sky-50 dark:from-purple-950/30 dark:via-indigo-950/30 dark:to-sky-950/30 border border-purple-200 dark:border-purple-800 shadow-sm">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-xl shrink-0 shadow-md shadow-purple-600/30">
+              <i class="ri-apple-fill"></i>
             </div>
-
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Định Dạng Xuất Ra:</label>
-              <select id="compress-format-select" onchange="renderCompressedCanvas()" class="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
-                <option value="image/webp">Chuẩn WebP Thế Hệ Mới (Siêu Nhẹ - Khuyên Dùng)</option>
-                <option value="image/jpeg">Chuẩn JPEG / JPG Tiêu Chuẩn</option>
-              </select>
+              <h4 class="text-xs sm:text-sm font-extrabold text-purple-950 dark:text-purple-200 uppercase tracking-wide">
+                TẠI SAO ẢNH IPHONE (.HEIC) KHÔNG MỞ ĐƯỢC TRÊN MÁY TÍNH VÀ SHOPPE/TIKTOK?
+              </h4>
+              <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                iPhone từ iOS 11 mặc định lưu ảnh dưới định dạng <strong>.HEIC</strong> để tiết kiệm bộ nhớ. Nhưng máy tính Windows cũ, Zalo trên PC, phần mềm kế toán và các sàn Shopee/TikTok thường <strong>báo lỗi không hỗ trợ định dạng này</strong>. 
+                ZenTool giúp bạn chuyển đổi hàng loạt sang <strong>JPG / PNG chuẩn quốc tế</strong> siêu nét chỉ trong 2 giây, không tải ảnh lên bất kỳ máy chủ nào!
+              </p>
             </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                <span>Chất lượng nén:</span>
-                <span id="quality-number" class="font-mono text-purple-600">80%</span>
-              </div>
-              <input type="range" id="compress-quality-slider" min="30" max="95" value="80" oninput="updateQualitySlider(this.value)" class="w-full accent-purple-600">
-              <p class="text-[10px] text-slate-400 mt-0.5">80% là mức vàng: Dung lượng giảm 75% mà mắt thường không thấy khác biệt.</p>
-            </div>
-
-            <button onclick="downloadCompressedImage()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition flex items-center justify-center gap-2">
-              <i class="ri-download-cloud-line text-sm"></i> Tải Ảnh Đã Nén Về Máy
-            </button>
-
           </div>
         </div>
 
-        <div class="lg:col-span-7 flex flex-col items-center justify-center">
-          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-md w-full text-center">
-            <canvas id="media-canvas" class="max-w-full rounded-xl mx-auto shadow-inner bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></canvas>
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span id="orig-size-label">Chưa chọn ảnh</span>
-              <i class="ri-arrow-right-line"></i>
-              <span id="compressed-size-label" class="font-bold text-purple-600 dark:text-purple-400">Chờ nén...</span>
+        <!-- Layout Chuyển Đổi HEIC -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Cột Cấu Hình & Tải Lên (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              
+              <div onclick="document.getElementById('heic-batch-input').click()" 
+                   class="border-2 border-dashed border-purple-300 dark:border-purple-800 hover:border-purple-500 rounded-xl p-8 text-center cursor-pointer transition bg-purple-50/30 dark:bg-purple-950/20">
+                <i class="ri-image-add-line text-4xl text-purple-500 mb-2 block"></i>
+                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả các file .HEIC vào đây</p>
+                <p class="text-[11px] text-slate-400 mt-1">Hỗ trợ chọn 50 - 100 ảnh iPhone cùng lúc</p>
+                <input type="file" id="heic-batch-input" accept=".heic,.heif,.HEIC,.HEIF,image/heic,image/heif" multiple class="hidden" onchange="handleHeicBatchUpload(event)">
+              </div>
+
+              <div class="space-y-3 text-xs">
+                <div>
+                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Định Dạng Đầu Ra:</label>
+                  <select id="heic-format-select" class="w-full font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+                    <option value="image/jpeg">Chuẩn JPEG / JPG (Khuyên Dùng - Tương thích 100% mọi nơi)</option>
+                    <option value="image/png">Chuẩn PNG (Giữ chi tiết nguyên bản chất lượng cao)</option>
+                    <option value="image/webp">Chuẩn WebP (Siêu nhẹ cho Website & Đăng sàn)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Chất Lượng Xuất Ảnh:</label>
+                  <select id="heic-quality-select" class="w-full font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+                    <option value="0.9">90% — Cực Kỳ Sắc Nét (Gần như không nén)</option>
+                    <option value="0.8" selected>80% — Tiêu Chuẩn Vàng (Đẹp & Giảm 70% dung lượng)</option>
+                    <option value="0.7">70% — Tối Ưu Dung Lượng (Cực nhẹ cho gửi mail)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Nút Thử Nghiệm Nhanh -->
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="loadSampleHeicTest()" class="w-full py-2.5 px-3 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 font-bold text-xs rounded-xl border border-purple-200 dark:border-purple-800 transition flex items-center justify-center gap-1.5 shadow-sm">
+                  <i class="ri-magic-line"></i> ⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu
+                </button>
+              </div>
+
             </div>
           </div>
+
+          <!-- Cột Danh Sách Ảnh Đã Đổi (7 Cols) -->
+          <div class="lg:col-span-7 space-y-4">
+            
+            <!-- Placeholder khi chưa có ảnh -->
+            <div id="heic-placeholder" class="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-slate-200 dark:border-slate-800 text-center text-slate-400">
+              <i class="ri-image-line text-5xl text-slate-300 dark:text-slate-700 mb-3 block"></i>
+              <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">Chưa có ảnh HEIC nào được chuyển đổi</h4>
+              <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Chọn các ảnh từ iPhone (.heic) kéo vào khung bên trái, hoặc bấm <strong>"⚡ Thử Nghiệm Chuyển Đổi Ảnh Mẫu"</strong> để trải nghiệm.</p>
+            </div>
+
+            <!-- Loading Progress Container -->
+            <div id="heic-progress-box" class="hidden bg-white dark:bg-slate-900 p-5 rounded-2xl border border-purple-200 dark:border-purple-800 shadow-sm space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold text-purple-700 dark:text-purple-300">
+                <span id="heic-progress-label">Đang giải mã ảnh HEIC trong RAM...</span>
+                <span id="heic-progress-percent" class="font-mono">0%</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div id="heic-progress-bar" class="bg-gradient-to-r from-purple-600 to-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Danh Sách Kết Quả -->
+            <div id="heic-results-container" class="hidden space-y-3">
+              <div class="flex items-center justify-between p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+                <span class="font-bold text-slate-700 dark:text-slate-300">
+                  Đã chuyển đổi thành công: <strong id="heic-converted-count" class="text-purple-600 font-mono">0</strong> ảnh
+                </span>
+                <div class="flex items-center gap-2">
+                  <button onclick="downloadAllHeicZip()" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <i class="ri-folder-zip-line"></i> 📦 Tải Toàn Bộ (File ZIP)
+                  </button>
+                  <button onclick="clearAllHeicFiles()" class="px-2.5 py-1.5 text-rose-500 hover:text-rose-700 font-bold border border-rose-200 dark:border-rose-900 rounded-lg hover:bg-rose-50 transition" title="Xóa toàn bộ ảnh">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Thẻ Danh Sách Cuộn Ảnh -->
+              <div id="heic-cards-list" class="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                <!-- Dynamic Items -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VIEW 2: NÉN ẢNH TỐI ƯU TỐC ĐỘ (WEBP / JPG)                   -->
+      <!-- ============================================================ -->
+      <div id="media-compress-view" class="space-y-6 hidden">
+        
+        <!-- GIẢI THÍCH CHI TIẾT TẠI SAO CẦN NÉN ẢNH -->
+        <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <h2 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="ri-questionnaire-line text-purple-600"></i> Tại Sao Bạn Cần Nén Ảnh? Tính Năng Này Giúp Gì Cho Bạn?
+          </h2>
+          
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Nhiều người thắc mắc: <em>"Ảnh chụp từ điện thoại nét căng thì cứ để nguyên đăng lên, tại sao phải nén làm gì?"</em>. Thực tế, một bức ảnh chụp điện thoại thường nặng từ <strong>5MB đến 15MB</strong>. Dung lượng quá nặng này chính là thủ phạm gây ra 4 rắc rối lớn hàng ngày:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div class="p-3.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 space-y-1">
+              <h4 class="font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                <i class="ri-speed-line text-purple-600"></i> 1. Tăng Tốc Độ Mở Trang Web Gấp 5 Lần
+              </h4>
+              <p class="text-slate-600 dark:text-slate-300">
+                Khách hàng lướt web trên điện thoại nếu ảnh load quá 3 giây họ sẽ tắt ngay lập tức. Nén ảnh giúp trang web mở ra trong tích tắc, giữ chân khách mua hàng.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 space-y-1">
+              <h4 class="font-bold text-sky-900 dark:text-sky-200 flex items-center gap-1.5">
+                <i class="ri-mail-send-line text-sky-600"></i> 2. Gửi Email Không Bị Báo Lỗi Vượt 25MB
+              </h4>
+              <p class="text-slate-600 dark:text-slate-300">
+                Hòm thư Gmail hay Outlook thường giới hạn file đính kèm dưới 25MB. Đính kèm 3 bức ảnh gốc là hòm thư báo lỗi không gửi được. Nén ảnh giúp bạn gửi cả chục ảnh nhẹ nhàng.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 space-y-1">
+              <h4 class="font-bold text-orange-900 dark:text-orange-200 flex items-center gap-1.5">
+                <i class="ri-shopping-cart-line text-orange-600"></i> 3. Đăng Bán Trên Shopee & TikTok Shop Không Bị Từ Chối
+              </h4>
+              <p class="text-slate-600 dark:text-slate-300">
+                Các sàn thương mại điện tử yêu cầu ảnh tải lên phải dưới 1MB - 2MB. Ảnh nén sang chuẩn <strong>WebP</strong> giữ nguyên độ sắc nét nhưng dung lượng giảm tới 80%, sàn duyệt ngay lập tức.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-1">
+              <h4 class="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                <i class="ri-hard-drive-2-line text-emerald-600"></i> 4. Tiết Kiệm Dung Lượng Ổ Cứng & Google Drive
+              </h4>
+              <p class="text-slate-600 dark:text-slate-300">
+                Lưu trữ 1.000 ảnh gốc tốn 10GB dung lượng máy. Sau khi nén chỉ còn chưa tới 1.5GB, không bao giờ phải lo máy tính bị báo đầy bộ nhớ.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compressor Tool -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <div class="lg:col-span-5 space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              
+              <div onclick="document.getElementById('compress-file-input').click()" class="border-2 border-dashed border-purple-300 dark:border-purple-800 hover:border-purple-500 rounded-xl p-6 text-center cursor-pointer transition bg-purple-50/30 dark:bg-purple-950/20">
+                <i class="ri-image-add-line text-4xl text-purple-500 mb-2 block"></i>
+                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả ảnh vào đây để nén</p>
+                <p class="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, WEBP dung lượng tối đa 25MB</p>
+                <input type="file" id="compress-file-input" accept="image/*" class="hidden" onchange="handleImageCompressUpload(event)">
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Định Dạng Xuất Ra:</label>
+                <select id="compress-format-select" onchange="renderCompressedCanvas()" class="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+                  <option value="image/webp">Chuẩn WebP Thế Hệ Mới (Siêu Nhẹ - Khuyên Dùng)</option>
+                  <option value="image/jpeg">Chuẩn JPEG / JPG Tiêu Chuẩn</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  <span>Chất lượng nén:</span>
+                  <span id="quality-number" class="font-mono text-purple-600">80%</span>
+                </div>
+                <input type="range" id="compress-quality-slider" min="30" max="95" value="80" oninput="updateQualitySlider(this.value)" class="w-full accent-purple-600">
+                <p class="text-[10px] text-slate-400 mt-0.5">80% là mức vàng: Dung lượng giảm 75% mà mắt thường không thấy khác biệt.</p>
+              </div>
+
+              <button onclick="downloadCompressedImage()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition flex items-center justify-center gap-2">
+                <i class="ri-download-cloud-line text-sm"></i> Tải Ảnh Đã Nén Về Máy
+              </button>
+
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 flex flex-col items-center justify-center">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-md w-full text-center">
+              <canvas id="media-canvas" class="max-w-full rounded-xl mx-auto shadow-inner bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"></canvas>
+              <div class="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span id="orig-size-label">Chưa chọn ảnh</span>
+                <i class="ri-arrow-right-line"></i>
+                <span id="compressed-size-label" class="font-bold text-purple-600 dark:text-purple-400">Chờ nén...</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
