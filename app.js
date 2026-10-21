@@ -137,6 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initCategorySelect();
   calculateDetailedProfit();
   initCompressSample();
+  if (typeof updateWatermarkPreview === 'function') {
+    setTimeout(updateWatermarkPreview, 100);
+  }
 });
 
 // ============================================================
@@ -1341,29 +1344,132 @@ async function executeRotatePdf() {
   }
 }
 
-// 5. Đóng Dấu Bản Quyền / Watermark PDF (Kế thừa từ CIT-PDF, hỗ trợ xóa file chọn nhầm)
+// 5. Đóng Dấu Bản Quyền / Watermark PDF Pro (Hỗ trợ tùy biến phông, kích thước, màu sắc & độ mờ)
 let selectedPdfForWatermark = null;
+
+function hexToRgb(hex) {
+  let c = (hex || '#dc2626').replace('#', '');
+  if (c.length === 3) c = c.split('').map(x => x + x).join('');
+  const num = parseInt(c, 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
+function setWmColor(colorHex) {
+  const picker = document.getElementById('wm-color-picker');
+  if (picker) picker.value = colorHex;
+  updateWatermarkPreview();
+}
+
+function getWatermarkFontFamily(val) {
+  switch (val) {
+    case 'serif': return '"Times New Roman", Georgia, Cambria, serif';
+    case 'mono': return '"Courier New", "JetBrains Mono", Consolas, monospace';
+    case 'impact': return 'Impact, "Arial Black", sans-serif';
+    case 'sans':
+    default:
+      return '"Segoe UI", Arial, "Helvetica Neue", sans-serif';
+  }
+}
+
+function getWatermarkOptions() {
+  const textInput = document.getElementById('wm-text-input');
+  const text = (textInput ? textInput.value.trim() : '') || 'BẢN SAO NỘI BỘ';
+
+  const fontSelect = document.getElementById('wm-font-select');
+  const fontKey = fontSelect ? fontSelect.value : 'sans';
+  const fontFamily = getWatermarkFontFamily(fontKey);
+
+  const sizeSlider = document.getElementById('wm-size-slider');
+  const fontSize = sizeSlider ? Number(sizeSlider.value) : 80;
+
+  const opacitySlider = document.getElementById('wm-opacity-slider');
+  const opacityVal = opacitySlider ? Number(opacitySlider.value) : 35;
+  const opacity = opacityVal / 100;
+
+  const colorPicker = document.getElementById('wm-color-picker');
+  const colorHex = colorPicker ? colorPicker.value : '#dc2626';
+  const rgb = hexToRgb(colorHex);
+
+  return { text, fontKey, fontFamily, fontSize, opacityVal, opacity, colorHex, rgb };
+}
+
+function updateWatermarkPreview() {
+  const opts = getWatermarkOptions();
+
+  const sizeValEl = document.getElementById('wm-size-val');
+  if (sizeValEl) sizeValEl.textContent = `${opts.fontSize}px`;
+
+  const opacityValEl = document.getElementById('wm-opacity-val');
+  if (opacityValEl) opacityValEl.textContent = `${opts.opacityVal}%`;
+
+  const canvas = document.getElementById('wm-preview-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Dựng nền mô phỏng giấy
+  ctx.save();
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, w, h);
+
+  // Vẽ watermark nghiêng nhẹ ở trung tâm preview
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-15 * Math.PI / 180);
+
+  const previewScale = Math.min(1.2, Math.max(0.4, opts.fontSize / 70));
+  const previewFontSize = Math.round(22 * previewScale);
+  ctx.font = `900 ${previewFontSize}px ${opts.fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Fill text với độ mờ
+  ctx.fillStyle = `rgba(${opts.rgb.r}, ${opts.rgb.g}, ${opts.rgb.b}, ${Math.max(0.2, opts.opacity)})`;
+  ctx.fillText(opts.text, 0, 0);
+
+  // Viền nét mảnh tạo tương phản
+  ctx.strokeStyle = `rgba(${opts.rgb.r}, ${opts.rgb.g}, ${opts.rgb.b}, ${Math.max(0.15, opts.opacity * 0.75)})`;
+  ctx.lineWidth = 1.2;
+  ctx.strokeText(opts.text, 0, 0);
+
+  ctx.restore();
+}
+
 function handlePdfForWatermark(event) {
   const file = event.target.files[0];
   if (!file) return;
   selectedPdfForWatermark = file;
-  document.getElementById('wm-file-name').textContent = file.name;
-  document.getElementById('wm-controls').classList.remove('hidden');
+  const fileNameEl = document.getElementById('wm-file-name');
+  if (fileNameEl) fileNameEl.textContent = file.name;
+  const fileBox = document.getElementById('wm-file-selected-box');
+  if (fileBox) fileBox.classList.remove('hidden');
+  const pickBtn = document.getElementById('wm-pick-file-btn');
+  if (pickBtn) pickBtn.classList.add('hidden');
+  updateWatermarkPreview();
   event.target.value = '';
 }
 
 function clearWatermarkPdf() {
   selectedPdfForWatermark = null;
-  const controls = document.getElementById('wm-controls');
-  if (controls) controls.classList.add('hidden');
+  const fileBox = document.getElementById('wm-file-selected-box');
+  if (fileBox) fileBox.classList.add('hidden');
+  const pickBtn = document.getElementById('wm-pick-file-btn');
+  if (pickBtn) pickBtn.classList.remove('hidden');
   const input = document.getElementById('pdf-wm-input');
   if (input) input.value = '';
 }
 
-// Tạo ảnh Watermark chữ chìm hỗ trợ 100% tiếng Việt có dấu (Unicode) bằng Canvas
-function createWatermarkPng(text) {
+// Tạo ảnh Watermark chữ chìm độ nét cao bằng Canvas nhúng vào PDF
+function createWatermarkPng(text, customOptions) {
   return new Promise((resolve, reject) => {
     try {
+      const opts = customOptions || getWatermarkOptions();
       const canvas = document.createElement('canvas');
       const size = 1000;
       canvas.width = size;
@@ -1373,25 +1479,27 @@ function createWatermarkPng(text) {
       ctx.clearRect(0, 0, size, size);
       ctx.save();
       ctx.translate(size / 2, size / 2);
-      ctx.rotate(-45 * Math.PI / 180); // Xoay chéo 45 độ từ góc dưới trái lên góc trên phải
+      ctx.rotate(-45 * Math.PI / 180); // Xoay chéo chuẩn 45 độ
 
-      let fontSize = 92;
-      ctx.font = `900 ${fontSize}px "Segoe UI", Arial, "Helvetica Neue", sans-serif`;
+      let fontSize = opts.fontSize || 80;
+      const canvasFontSize = Math.round(fontSize * 1.2);
+      ctx.font = `900 ${canvasFontSize}px ${opts.fontFamily}`;
+
       const metrics = ctx.measureText(text);
-      if (metrics.width > 800) {
-        fontSize = Math.max(26, Math.floor(fontSize * (800 / metrics.width)));
-        ctx.font = `900 ${fontSize}px "Segoe UI", Arial, "Helvetica Neue", sans-serif`;
+      if (metrics.width > 850) {
+        const scaledSize = Math.max(24, Math.floor(canvasFontSize * (850 / metrics.width)));
+        ctx.font = `900 ${scaledSize}px ${opts.fontFamily}`;
       }
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // Màu chữ mờ xám chống sao chép tài liệu
-      ctx.fillStyle = 'rgba(170, 170, 170, 0.38)';
+      // Màu chữ theo cấu hình của người dùng
+      ctx.fillStyle = `rgba(${opts.rgb.r}, ${opts.rgb.g}, ${opts.rgb.b}, ${opts.opacity})`;
       ctx.fillText(text, 0, 0);
 
-      // Viền nét mảnh nhẹ tạo độ tương phản trên các trang tài liệu có nền
-      ctx.strokeStyle = 'rgba(130, 130, 130, 0.25)';
+      // Viền nét mảnh nhẹ tạo độ tương phản
+      ctx.strokeStyle = `rgba(${opts.rgb.r}, ${opts.rgb.g}, ${opts.rgb.b}, ${opts.opacity * 0.75})`;
       ctx.lineWidth = 2.5;
       ctx.strokeText(text, 0, 0);
 
@@ -1427,7 +1535,8 @@ function createWatermarkPng(text) {
 
 async function executeWatermarkPdf() {
   if (!selectedPdfForWatermark) {
-    alert('Vui lòng chọn file PDF để đóng dấu.');
+    const input = document.getElementById('pdf-wm-input');
+    if (input) input.click();
     return;
   }
   const isReady = await ensurePdfLib();
@@ -1435,14 +1544,17 @@ async function executeWatermarkPdf() {
     alert('Thư viện PDF-Lib chưa sẵn sàng. Anh vui lòng tải lại trang (F5).');
     return;
   }
-  const text = document.getElementById('wm-text-input').value.trim() || 'BẢN SAO NỘI BỘ';
+
+  const opts = getWatermarkOptions();
+  const text = opts.text;
+
   try {
     const arrayBuffer = await selectedPdfForWatermark.arrayBuffer();
     const doc = await PDFLib.PDFDocument.load(arrayBuffer);
     const pages = doc.getPages();
     
-    // Tạo ảnh watermark PNG hỗ trợ trọn vẹn tiếng Việt có dấu
-    const pngBuffer = await createWatermarkPng(text);
+    // Tạo ảnh watermark PNG hỗ trợ trọn vẹn tiếng Việt có dấu với cấu hình tùy biến
+    const pngBuffer = await createWatermarkPng(text, opts);
     const watermarkImage = await doc.embedPng(pngBuffer);
     
     pages.forEach(p => {
@@ -1453,7 +1565,7 @@ async function executeWatermarkPdf() {
         y: (height - wmDim) / 2,
         width: wmDim,
         height: wmDim,
-        opacity: 0.85,
+        opacity: 0.95,
       });
     });
     
@@ -1466,11 +1578,10 @@ async function executeWatermarkPdf() {
     a.click();
     URL.revokeObjectURL(url);
     
-    logOfficeAction('Watermark', `Đã chèn watermark tiếng Việt "${text}" vào tệp "${selectedPdfForWatermark.name}"`);
+    logOfficeAction('Watermark', `Đã đóng dấu "${text}" (${opts.fontKey}, ${opts.fontSize}px, ${opts.colorHex}, ${opts.opacityVal}%) vào tệp "${selectedPdfForWatermark.name}"`);
     showToast(`🎉 Đã đóng dấu watermark "${text}" thành công!`);
   } catch (err) {
-    console.error(err);
-    alert('Lỗi đóng dấu: ' + err.message);
+    alert('Lỗi đóng dấu watermark: ' + err.message);
   }
 }
 
@@ -2975,7 +3086,7 @@ const TRANSLATIONS = {
   "Người Bán Hàng": "Seller",
   "Người Mua Hàng": "Buyer",
   "Người mua: ...": "Buyer: ...",
-  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Enter stamp text (e.g., COPY, CONFIDENTIAL)",
+  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Enter watermark text (e.g., COPY, CONFIDENTIAL)",
   "Nhập mật khẩu (CCCD hoặc ngày sinh)...": "Enter password (ID number or date of birth)...",
   "Nhật Ký Phiên Làm Việc\\n 0": "Session Activity Log\\n 0",
   "Nén & Tải Về Máy": "Compress & Download",
@@ -3212,7 +3323,18 @@ const TRANSLATIONS = {
   "• Bấm": "• Click",
   "🇩🇪 DE": "🇩🇪 DE",
   "🇬🇧 EN": "🇬🇧 EN",
-  "🇻🇳 VI": "🇻🇳 VI"
+  "🇻🇳 VI": "🇻🇳 VI",
+  "Nội dung chữ đóng dấu:": "Watermark text:",
+  "Phông Chữ:": "Font Family:",
+  "Cỡ chữ:": "Size:",
+  "Độ mờ:": "Opacity:",
+  "Màu Sắc Đóng Dấu:": "Watermark Color:",
+  "Xem trước dấu chìm:": "Watermark preview:",
+  "Sans-serif Hiện Đại (Segoe UI / Arial)": "Modern Sans-serif (Segoe UI / Arial)",
+  "Serif Trang Trọng (Times New Roman)": "Classic Serif (Times New Roman)",
+  "Monospace Kỹ Thuật (Courier New)": "Technical Monospace (Courier New)",
+  "Đậm Nổi Bật (Impact / Arial Black)": "Bold & Prominent (Impact / Arial Black)",
+  "Góc nghiêng 45°": "45° angle"
 },
   de: {
   "(Bạn hoàn toàn có thể rút dây mạng hoặc ngắt Wifi mà trang web vẫn đọc hóa đơn bình thường 100%)": "(Sie können das Netzwerkkabel vollständig abziehen oder das WLAN ausschalten, und die Website liest Rechnungen trotzdem normal zu 100 % aus)",
@@ -3332,7 +3454,7 @@ const TRANSLATIONS = {
   "Người Bán Hàng": "Verkäufer",
   "Người Mua Hàng": "Käufer",
   "Người mua: ...": "Käufer: ...",
-  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Stempeltext eingeben (z. B. KOPIE, VERTRAULICH)",
+  "Nhập chữ cần đóng dấu (VD: BẢN SAO, MẬT)": "Wasserzeichen eingeben (z. B. KOPIE, VERTRAULICH)",
   "Nhập mật khẩu (CCCD oder ngày sinh)...": "Passwort eingeben (Ausweisnummer oder Geburtsdatum)...",
   "Nhật Ký Phiên Làm Việc\\n 0": "Sitzungsprotokoll\\n 0",
   "Nén & Tải Về Máy": "Komprimieren & Herunterladen",
@@ -3570,7 +3692,18 @@ const TRANSLATIONS = {
   "• Bấm": "• Klicken Sie auf",
   "🇩🇪 DE": "🇩🇪 DE",
   "🇬🇧 EN": "🇬🇧 EN",
-  "🇻🇳 VI": "🇻🇳 VI"
+  "🇻🇳 VI": "🇻🇳 VI",
+  "Nội dung chữ đóng dấu:": "Wasserzeichen-Text:",
+  "Phông Chữ:": "Schriftart:",
+  "Cỡ chữ:": "Größe:",
+  "Độ mờ:": "Deckkraft:",
+  "Màu Sắc Đóng Dấu:": "Stempelfarbe:",
+  "Xem trước dấu chìm:": "Stempel-Vorschau:",
+  "Sans-serif Hiện Đại (Segoe UI / Arial)": "Modernes Sans-serif (Segoe UI / Arial)",
+  "Serif Trang Trọng (Times New Roman)": "Klassisches Serif (Times New Roman)",
+  "Monospace Kỹ Thuật (Courier New)": "Technisches Monospace (Courier New)",
+  "Đậm Nổi Bật (Impact / Arial Black)": "Fett & Markant (Impact / Arial Black)",
+  "Góc nghiêng 45°": "45°-Winkel"
 }
 };
 
