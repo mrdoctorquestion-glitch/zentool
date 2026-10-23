@@ -4,6 +4,8 @@ Allow: /
 Disallow: /vendor/
 Disallow: /api/
 
+Sitemap: https://www.zentool.io.vn/sitemap.xml
+
 # Block Aggressive Scrapers & Automated Crawlers
 User-agent: GPTBot
 Disallow: /
