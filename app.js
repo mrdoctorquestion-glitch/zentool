@@ -4471,7 +4471,7 @@ function clearBgRemove() {
 const ZenTelemetry = {
   // Cấu hình Endpoint Cloudflare Worker (hoặc custom domain của anh)
   // Mặc định tự động nhận diện từ window.ZENTOOL_TELEMETRY_ENDPOINT nếu có
-  apiUrl: (typeof window !== 'undefined' && window.ZENTOOL_TELEMETRY_ENDPOINT) || '',
+  apiUrl: (typeof window !== 'undefined' && window.ZENTOOL_TELEMETRY_ENDPOINT) || 'https://zentool.mr-doctorquestion.workers.dev',
 
   visitorId: '',
   sessionId: '',
