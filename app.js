@@ -149,7 +149,26 @@ document.addEventListener('DOMContentLoaded', () => {
 // HỆ THỐNG PHÒNG THỦ BẢO MẬT: ZENGUARD CYBERSECURITY SHIELD
 // ============================================================
 function initZenGuardSecurity() {
-  // 1. Chống nhúng trộm iFrame / Anti-Clickjacking
+  // 1. Domain Lock: Khóa mã nguồn chỉ cho phép chạy trên tên miền chính chủ
+  try {
+    const host = window.location.hostname.toLowerCase();
+    const isAllowed = ['zentool.io.vn', 'www.zentool.io.vn', 'localhost', '127.0.0.1'].some(d => host === d || host.endsWith('.' + d));
+    if (!isAllowed) {
+      document.documentElement.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#ef4444;font-family:system-ui,sans-serif;text-align:center;padding:24px;">
+          <div style="font-size:48px;margin-bottom:16px;">🛡️</div>
+          <h1 style="font-size:22px;font-weight:800;color:#f87171;margin-bottom:8px;">CẢNH BÁO VI PHẠM BẢN QUYỀN MÃ NGUỒN</h1>
+          <p style="color:#94a3b8;font-size:14px;max-width:500px;line-height:1.6;">Toàn bộ giao diện và giải thuật tính toán thuộc sở hữu độc quyền của <strong>ZenTool Suite (www.zentool.io.vn)</strong>. Mọi hành vi clone hoặc triển khai trái phép trên tên miền khác đều bị khóa tự động.</p>
+          <a href="https://www.zentool.io.vn" style="margin-top:20px;padding:10px 20px;background:#0284c7;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">Truy cập Bản gốc Chính chủ</a>
+        </div>
+      `;
+      throw new Error("ZenGuard: Unauthorized Domain Execution");
+    }
+  } catch (dErr) {
+    if (dErr.message && dErr.message.includes("Unauthorized Domain")) throw dErr;
+  }
+
+  // 2. Chống nhúng trộm iFrame / Anti-Clickjacking
   try {
     if (window.top !== window.self) {
       window.top.location = window.self.location;
@@ -158,14 +177,14 @@ function initZenGuardSecurity() {
     console.warn("ZenGuard: Phát hiện hành vi nhúng iFrame từ bên thứ ba!");
   }
 
-  // 2. Chặn chuột phải trên các khu vực cấu trúc (cho phép trong input/textarea)
+  // 3. Chặn chuột phải trên các khu vực cấu trúc (cho phép trong input/textarea)
   document.addEventListener('contextmenu', (e) => {
     if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
     e.preventDefault();
     showToast('🛡️ Chế độ bảo mật ZenGuard: Chức năng sao chép cấu trúc mã nguồn đã bị khóa.');
   });
 
-  // 3. Chặn phím tắt mở DevTools, xem Source code và Lưu trang web
+  // 4. Chặn phím tắt mở DevTools, xem Source code và Lưu trang web
   document.addEventListener('keydown', (e) => {
     // F12
     if (e.keyCode === 123) {
@@ -195,10 +214,24 @@ function initZenGuardSecurity() {
     }
   });
 
-  // 4. In thông điệp cảnh báo bản quyền & bảo mật trong Console
+  // 5. Phát hiện DevTools mở qua Browser Menu (Window Size Difference Check)
+  let devToolsNotified = false;
+  const checkDevToolsSize = () => {
+    const threshold = 160;
+    const isDocked = (window.outerWidth - window.innerWidth > threshold) || 
+                     (window.outerHeight - window.innerHeight > threshold);
+    if (isDocked && !devToolsNotified) {
+      devToolsNotified = true;
+      showToast('🛡️ Cảnh báo: Công cụ lập trình viên (DevTools) đang mở.');
+    }
+  };
+  window.addEventListener('resize', checkDevToolsSize);
+  setInterval(checkDevToolsSize, 2500);
+
+  // 6. In thông điệp cảnh báo bản quyền & bảo mật trong Console
   try {
     console.log(
-      "%c🛡️ ZENGUARD CYBERSECURITY SHIELD ACTIVE — 100% CLIENT-SIDE VERIFIED",
+      "%c🛡️ ZENGUARD CYBERSECURITY SHIELD PRO — 100% CLIENT-SIDE VERIFIED",
       "background: #0284c7; color: white; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;"
     );
     console.log(
@@ -428,8 +461,8 @@ function renderInvoiceUI(data) {
     const tr = document.createElement('tr');
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50";
     tr.innerHTML = `
-      <td class="py-2 px-1 text-center font-mono text-slate-500">${item.stt}</td>
-      <td class="py-2 px-2 font-medium text-slate-900 dark:text-slate-100">${item.name}</td>
+      <td class="py-2 px-1 text-center font-mono text-slate-500">${escapeHtml(item.stt)}</td>
+      <td class="py-2 px-2 font-medium text-slate-900 dark:text-slate-100">${escapeHtml(item.name)}</td>
       <td class="py-2 px-2 text-center text-slate-500">${item.unit}</td>
       <td class="py-2 px-2 text-right font-mono">${item.qty.toLocaleString('vi-VN')}</td>
       <td class="py-2 px-2 text-right font-mono">${item.price.toLocaleString('vi-VN')}</td>
@@ -4471,7 +4504,7 @@ function clearBgRemove() {
 const ZenTelemetry = {
   // Cấu hình Endpoint Cloudflare Worker (hoặc custom domain của anh)
   // Mặc định tự động nhận diện từ window.ZENTOOL_TELEMETRY_ENDPOINT nếu có
-  apiUrl: (typeof window !== 'undefined' && (window.ZENTOOL_TELEMETRY_ENDPOINT || (window.location.hostname.includes('zentool.io.vn') ? window.location.origin : 'https://www.zentool.io.vn'))),
+  apiUrl: (typeof window !== 'undefined' && window.ZENTOOL_TELEMETRY_ENDPOINT) || 'https://zentool.mr-doctorquestion.workers.dev',
 
   visitorId: '',
   sessionId: '',
