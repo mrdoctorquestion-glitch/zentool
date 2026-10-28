@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" class="light">
 <head>
+  <script src="security_armor.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZenTool Suite — Siêu Tiện Ích Văn Phòng & Trợ Lý Lợi Nhuận Bán Hàng 100% Client-Side</title>
@@ -912,34 +913,117 @@
 
         <!-- Tool 11: Sửa Lỗi Font Chữ Tiếng Việt (TCVN3 sang Unicode) -->
         <div class="tool-card tool-cat-security bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-              <i class="ri-font-size text-lg"></i>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold shadow-sm shadow-emerald-500/20">
+                <i class="ri-font-size text-xl"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Cứu Lỗi Font Tiếng Việt Toàn Diện</h3>
+                  <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Word • Excel • PDF • Text</span>
+                </div>
+                <p class="text-[11px] text-slate-400">Sửa hoàn chỉnh lỗi font .VnTime (TCVN3), VNI-Windows sang chuẩn Unicode 100% Client-Side</p>
+              </div>
             </div>
+          </div>
+
+          <!-- Sub-tabs: Sửa Cả File Tài Liệu vs Sửa Nhanh Đoạn Văn Bản -->
+          <div class="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl gap-1 text-xs font-semibold">
+            <button id="font-tab-file-btn" type="button" onclick="switchFontSubTab('file')" class="flex-1 py-1.5 rounded-lg bg-white dark:bg-slate-700 shadow-xs text-emerald-600 dark:text-emerald-400 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <i class="ri-file-word-2-line"></i> Sửa Cả File (Word, Excel, PDF)
+            </button>
+            <button id="font-tab-text-btn" type="button" onclick="switchFontSubTab('text')" class="flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer">
+              <i class="ri-text-snippet"></i> Sửa Nhanh Đoạn Văn Bản
+            </button>
+          </div>
+
+          <!-- Bảng mã nguồn lựa chọn -->
+          <div class="flex items-center justify-between text-xs gap-2 pt-1 px-1">
+            <span class="text-slate-500 font-medium flex items-center gap-1">
+              <i class="ri-settings-3-line"></i> Bảng mã nguồn:
+            </span>
+            <select id="font-encoding-select" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <option value="auto">✨ Tự động nhận diện bảng mã (Khuyên dùng)</option>
+              <option value="tcvn3">TCVN3 / ABC (.VnTime, .VnArial...)</option>
+              <option value="vni">VNI-Windows (VNI-Times, VNI-Helve...)</option>
+              <option value="unicode-tohop">Unicode Tổ Hợp (NFD sang NFC)</option>
+            </select>
+          </div>
+
+          <!-- PANEL 1: SỬA CẢ FILE (WORD, EXCEL, PDF) -->
+          <div id="font-panel-file" class="space-y-3">
+            <!-- Dropzone -->
+            <div id="font-file-dropzone" onclick="document.getElementById('font-file-input').click()" class="border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 rounded-xl p-5 text-center cursor-pointer bg-emerald-50/30 dark:bg-emerald-950/20 transition group">
+              <input type="file" id="font-file-input" class="hidden" accept=".docx,.xlsx,.xls,.pdf" onchange="if(this.files &amp;&amp; this.files[0]) handleFontFileUpload(this.files[0])" />
+              <div class="flex flex-col items-center gap-1.5">
+                <div class="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition shadow-xs">
+                  <i class="ri-upload-cloud-2-line text-2xl"></i>
+                </div>
+                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Kéo thả tệp Word (.docx), Excel (.xlsx) hoặc PDF vào đây</p>
+                <p class="text-[11px] text-slate-500">Hoặc bấm để duyệt tệp từ máy tính • Giữ nguyên 100% bảng biểu, ảnh, công thức • Xử lý siêu tốc trong RAM</p>
+              </div>
+            </div>
+
+            <!-- Status & Action Card -->
+            <div id="font-file-status" class="hidden rounded-xl p-4 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 space-y-3">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2.5 truncate">
+                  <i id="font-file-icon" class="ri-file-word-2-fill text-2xl text-blue-600"></i>
+                  <div class="truncate">
+                    <div id="font-file-name" class="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[220px]">bao_cao_2026.docx</div>
+                    <div id="font-file-meta" class="text-[11px] text-slate-400">125 KB • Đã sửa 0 đoạn văn bản</div>
+                  </div>
+                </div>
+                <span id="font-file-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <i class="ri-checkbox-circle-line"></i> Đã cứu font thành công
+                </span>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="pt-1 flex flex-wrap gap-2">
+                <button id="font-download-btn" type="button" onclick="downloadFixedFontFile()" class="flex-1 min-w-[200px] py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                  <i class="ri-download-2-line text-base"></i> Tải File Đã Cứu Font Hoàn Chỉnh
+                </button>
+                <button type="button" onclick="resetFontFileInput()" class="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition cursor-pointer">
+                  <i class="ri-refresh-line"></i> Đổi file khác
+                </button>
+              </div>
+
+              <!-- PDF Extracted Preview (Chỉ hiện khi nạp PDF) -->
+              <div id="font-pdf-preview-box" class="hidden space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <span>Trích xuất nội dung PDF đã cứu font chuẩn:</span>
+                  <button type="button" onclick="copyPdfFixedText()" class="text-emerald-600 hover:underline flex items-center gap-1 font-bold">
+                    <i class="ri-file-copy-line"></i> Sao chép toàn bộ văn bản
+                  </button>
+                </div>
+                <textarea id="font-pdf-text-area" rows="4" readonly class="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-mono"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL 2: SỬA NHANH ĐOẠN VĂN BẢN (TEXT PASTE) -->
+          <div id="font-panel-text" class="hidden space-y-3">
             <div>
-              <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Cứu Lỗi Font Tiếng Việt</h3>
-              <p class="text-[11px] text-slate-400">Chuyển văn bản TCVN3 (.VNTime) sang Unicode chuẩn</p>
+              <textarea id="font-input-text" rows="3" placeholder="Dán đoạn văn bản bị lỗi font chữ (.VnTime, VNI-Times, loạn mã ô vuông) vào đây..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
             </div>
-          </div>
 
-          <div>
-            <textarea id="font-input-text" rows="2" placeholder="Dán văn bản bị lỗi font chữ ô vuông/loạn mã vào đây..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
-          </div>
+            <div class="flex gap-2">
+              <button type="button" onclick="convertTcvn3ToUnicode()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1 cursor-pointer">
+                <i class="ri-flashlight-line"></i> Sửa Lỗi Font Ngay
+              </button>
+              <button type="button" onclick="copyConvertedFont()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 transition cursor-pointer">
+                <i class="ri-file-copy-line"></i> Copy
+              </button>
+              <button type="button" onclick="clearFontConverter()" class="px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition cursor-pointer" title="Xóa trắng nội dung">
+                <i class="ri-delete-bin-line"></i> Xóa
+              </button>
+            </div>
 
-          <div class="flex gap-2">
-            <button onclick="convertTcvn3ToUnicode()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition">
-              ⚡ Sửa Lỗi Font Ngay
-            </button>
-            <button onclick="copyConvertedFont()" class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-300 dark:border-slate-700 transition">
-              Copy
-            </button>
-            <button onclick="clearFontConverter()" class="px-3 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition" title="Xóa trắng nội dung">
-              <i class="ri-delete-bin-line"></i> Xóa
-            </button>
-          </div>
-
-          <div>
-            <textarea id="font-output-text" rows="2" readonly placeholder="Kết quả tiếng Việt chuẩn Unicode sẽ hiện ở đây..." class="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/40 text-emerald-700 dark:text-emerald-400 font-medium"></textarea>
+            <div>
+              <textarea id="font-output-text" rows="3" readonly placeholder="Kết quả tiếng Việt chuẩn Unicode sẽ hiện ở đây..." class="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/40 text-emerald-700 dark:text-emerald-400 font-medium"></textarea>
+            </div>
           </div>
         </div>
 
