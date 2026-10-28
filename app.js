@@ -1846,7 +1846,8 @@ async function processWordDocxFont(file, mode) {
 
     // Chuyển đổi nội dung văn bản bên trong các thẻ <w:t>...</w:t>
     xmlContent = xmlContent.replace(/(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g, (match, openTag, textContent, closeTag) => {
-      const fixedText = convertVietnameseText(textContent, mode);
+      let fixedText = convertVietnameseText(textContent, mode);
+      fixedText = cleanVietnamesePhrases(fixedText);
       if (fixedText !== textContent) convertedCount++;
       return openTag + fixedText + closeTag;
     });
@@ -1881,13 +1882,286 @@ async function processWordDocxFont(file, mode) {
   logOfficeAction('Cứu font Word', `Đã sửa hoàn chỉnh lỗi font file Word ${file.name} (${convertedCount} đoạn text)`);
 }
 
-// 2. Sửa Lỗi Font Cho File Excel (.xlsx, .xls)
+// Danh mục cụm từ dị thường và lỗi mã hóa đặc thù trong hồ sơ dự toán / kế toán
+const VIETNAMESE_PHRASE_FIXES = [
+  [/Cụng trỡnh giao thụng/gi, 'Công trình giao thông'],
+  [/LOẠI CỄNG TRÈNH/g, 'LOẠI CÔNG TRÌNH'],
+  [/loại cễng trènh/g, 'loại công trình'],
+  [/Chi phớ chung/gi, 'Chi phí chung'],
+  [/Nhúm Cụng trỡnh:/gi, 'Nhóm Công trình:'],
+  [/ĐIỀU KIỆN THIẾT KẾ, CẤP CỄNG TRÈNH/g, 'ĐIỀU KIỆN THIẾT KẾ, CẤP CÔNG TRÌNH'],
+  [/tr[­\xad\u00ad]*[íi]v\s*thu[Õõ]/gi, 'trước thuế'],
+  [/tr[­\xad\u00ad]*[íi]c\s*thu[Õõ]/gi, 'trước thuế'],
+  [/sau\s*thu[Õõ]/gi, 'sau thuế'],
+  [/thu[Õõ]\s*GTGT/gi, 'thuế GTGT'],
+  [/Cụng\s*trỡnh/gi, 'Công trình'],
+  [/cụng\s*trỡnh/gi, 'công trình'],
+  [/Chi\s*phớ/gi, 'Chi phí'],
+  [/chi\s*phớ/gi, 'chi phí'],
+  [/Dự\s*toỏn/gi, 'Dự toán'],
+  [/dự\s*toỏn/gi, 'dự toán']
+];
+
+// Hàm làm sạch triệt để các cụm từ bất quy tắc
+function cleanVietnamesePhrases(str) {
+  if (!str || typeof str !== 'string') return str;
+  let res = str;
+  for (const [regex, rep] of VIETNAMESE_PHRASE_FIXES) {
+    res = res.replace(regex, rep);
+  }
+  return res;
+}
+
+// 2. Sửa Lỗi Font & Định Dạng Chuyên Nghiệp Cho File Excel (.xlsx, .xls)
 async function processExcelFont(file, mode) {
-  if (typeof XLSX === 'undefined') {
-    throw new Error('Thư viện XLSX chưa sẵn sàng.');
+  const arrayBuffer = await file.arrayBuffer();
+  const autoStyle = document.getElementById('font-auto-style-excel')?.checked !== false;
+
+  // Sử dụng ExcelJS để có đầy đủ tính năng: Tô màu tiêu đề Navy, kẻ viền bảng, viền kép tổng cộng, Freeze Panes, định dạng số
+  if (typeof ExcelJS !== 'undefined') {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    let convertedCells = 0;
+
+    const FONT_FAMILY = "Arial";
+    const fontTitle = { name: FONT_FAMILY, size: 13, bold: true, color: { argb: "FF1F4E78" } };
+    const fontSubtitle = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF333333" } };
+    const fontHeader = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+    const fontSubHeader = { name: FONT_FAMILY, size: 9, bold: true, color: { argb: "FFFFFFFF" } };
+    const fontSection = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF002060" } };
+    const fontTotal = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFC00000" } };
+    const fontData = { name: FONT_FAMILY, size: 10, bold: false, color: { argb: "FF000000" } };
+
+    const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF1F4E78" } }; // Navy Blue
+    const fillSubHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF2E75B6" } }; // Steel Blue
+    const fillSection = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFD9E1F2" } }; // Soft Blue
+    const fillTotal = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFFFF2CC" } }; // Soft Yellow
+    const fillZebra = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFF9FAFB" } }; // Alternating tint
+
+    const bdThin = { style: 'thin', color: { argb: "FFBFBFBF" } };
+    const bdWhite = { style: 'thin', color: { argb: "FFFFFFFF" } };
+    const bdMedium = { style: 'medium', color: { argb: "FF1F4E78" } };
+    const bdDouble = { style: 'double', color: { argb: "FF000000" } };
+
+    const borderCell = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
+    const borderHeader = { top: bdMedium, left: bdWhite, bottom: bdMedium, right: bdWhite };
+    const borderSection = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
+    const borderTotal = { top: bdThin, left: bdThin, bottom: bdDouble, right: bdThin };
+
+    const alignCenter = { horizontal: 'center', vertical: 'middle' };
+    const alignLeft = { horizontal: 'left', vertical: 'middle' };
+    const alignRight = { horizontal: 'right', vertical: 'middle' };
+    const alignHeader = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+    workbook.worksheets.forEach(ws => {
+      // Bật hiển thị lưới Gridlines
+      if (ws.views && ws.views.length > 0) {
+        ws.views[0].showGridLines = true;
+      } else {
+        ws.views = [{ showGridLines: true }];
+      }
+
+      // 1. Chuyển đổi toàn bộ chuỗi văn bản & áp dụng từ điển làm sạch
+      ws.eachRow({ includeEmpty: false }, row => {
+        row.eachCell({ includeEmpty: false }, cell => {
+          if (typeof cell.value === 'string') {
+            const oldVal = cell.value;
+            let newVal = convertVietnameseText(oldVal, mode);
+            newVal = cleanVietnamesePhrases(newVal);
+            if (newVal !== oldVal) {
+              cell.value = newVal;
+              convertedCells++;
+            }
+          }
+        });
+      });
+
+      if (!autoStyle) return;
+
+      // 2. Nhận diện dòng tiêu đề (Header row)
+      let headerRowIdx = null;
+      for (let r = 1; r <= Math.min(10, ws.rowCount); r++) {
+        const row = ws.getRow(r);
+        const rowStrs = [];
+        row.eachCell({ includeEmpty: true }, (c, colNumber) => {
+          if (colNumber <= 10) rowStrs.push(String(c.value || '').trim().toUpperCase());
+        });
+        if (rowStrs.some(h => ['STT', 'TT', 'MÃ HIỆU', 'CHI PHÍ', 'NỘI DUNG CÔNG VIỆC', 'LOẠI CÔNG TRÌNH', 'TÊN VẬT TƯ'].some(k => h.includes(k)))) {
+          headerRowIdx = r;
+          break;
+        }
+      }
+
+      // Nhận diện dòng tiêu đề phụ (Sub-header row)
+      let subHeaderIdx = null;
+      if (headerRowIdx && headerRowIdx < ws.rowCount) {
+        const nextRow = ws.getRow(headerRowIdx + 1);
+        const nextStrs = [];
+        nextRow.eachCell({ includeEmpty: true }, (c, colNumber) => {
+          if (colNumber <= 12) nextStrs.push(String(c.value || '').trim());
+        });
+        if (nextStrs.some(h => ['Vữa', 'Định mức', 'Đơn giá', 'Vật liệu', 'Nhân công', 'Máy', 'Gốc', 'Thông báo', 'T1', 'Thi công', 'lượng'].some(k => h.includes(k)))) {
+          subHeaderIdx = headerRowIdx + 1;
+        }
+      }
+
+      // Khóa cố định dòng tiêu đề (Freeze Panes)
+      if (headerRowIdx && !['Bìa dự toán', 'Cấu hình'].includes(ws.name)) {
+        const freezeR = subHeaderIdx ? (subHeaderIdx + 1) : (headerRowIdx + 1);
+        ws.views = [{ state: 'frozen', ySplit: freezeR - 1, showGridLines: true }];
+      }
+
+      // 3. Nhận diện ngữ nghĩa cột (STT, Mã hiệu, Đơn vị, Văn bản, Số tiền)
+      const colSemantics = {};
+      if (headerRowIdx) {
+        const hRow = ws.getRow(headerRowIdx);
+        const subRow = subHeaderIdx ? ws.getRow(subHeaderIdx) : null;
+        for (let c = 1; c <= ws.columnCount; c++) {
+          const hVal = String(hRow.getCell(c).value || '').trim().toUpperCase();
+          const subVal = subRow ? String(subRow.getCell(c).value || '').trim().toUpperCase() : '';
+          const combined = `${hVal} ${subVal}`;
+          if (combined.includes('STT') || combined === 'TT') {
+            colSemantics[c] = 'stt';
+          } else if (['MÃ HIỆU', 'MSVT', 'MÃ'].some(k => combined.includes(k))) {
+            colSemantics[c] = 'code';
+          } else if (['ĐƠN VỊ', 'Đ/V', 'KÝ HIỆU'].some(k => combined.includes(k))) {
+            colSemantics[c] = 'unit';
+          } else if (['NỘI DUNG', 'TÊN VẬT TƯ', 'THÀNH PHẦN', 'LOẠI VẬT LIỆU', 'LOẠI CÔNG TRÌNH', 'CHI PHÍ', 'CÁCH TÍNH'].some(k => combined.includes(k))) {
+            colSemantics[c] = 'text';
+          } else if (['KHỐI LƯỢNG', 'ĐƠN GIÁ', 'THÀNH TIỀN', 'GIÁ TRỊ', 'HAO PHÍ', 'HỆ SỐ', 'ĐỊNH MỨC'].some(k => combined.includes(k))) {
+            colSemantics[c] = 'number';
+          }
+        }
+      }
+
+      // 4. Áp dụng định dạng, màu sắc và kẻ bảng cho từng dòng
+      for (let r = 1; r <= ws.rowCount; r++) {
+        const row = ws.getRow(r);
+        const nonNullVals = [];
+        row.eachCell({ includeEmpty: false }, c => {
+          if (c.value !== null && c.value !== undefined && String(c.value).trim() !== '') {
+            nonNullVals.push(String(c.value));
+          }
+        });
+        const rowStrUpper = nonNullVals.join(' ').toUpperCase();
+
+        const isTitle = (r <= 4 && nonNullVals.length <= 3 && ['BẢNG', 'CỘNG HOÀ', 'ĐỘC LẬP', 'DỰ TOÁN', 'CÔNG TRÌNH', 'HẠNG MỤC'].some(k => rowStrUpper.includes(k)));
+        const isTableHeader = (r === headerRowIdx);
+        const isSubHeader = (r === subHeaderIdx);
+        const isTotal = ['TỔNG CỘNG', 'CỘNG CHI PHÍ', 'GIÁ THÀNH DỰ TOÁN', 'GIÁ TRỊ DỰ TOÁN', 'LÀM TRÒN'].some(k => rowStrUpper.includes(k));
+        const isSection = (!isTotal && !isTableHeader && !isSubHeader && !isTitle && nonNullVals.some(v => ['Vật liệu', 'Nhân công', 'Máy thi công', 'Máy', 'I', 'II', 'III', 'IV', 'V'].includes(v.trim())));
+
+        // Chiều cao dòng
+        if (isTitle) row.height = 24;
+        else if (isTableHeader || isSubHeader) row.height = 28;
+        else if (isTotal || isSection) row.height = 22;
+        else row.height = 20;
+
+        // Định dạng từng ô
+        row.eachCell({ includeEmpty: false }, (cell, c) => {
+          const val = cell.value;
+
+          if (isTitle) {
+            cell.font = (r === 1 || rowStrUpper.includes('CỘNG HOÀ') || rowStrUpper.includes('BẢNG')) ? fontTitle : fontSubtitle;
+            return;
+          }
+
+          if (isTableHeader || isSubHeader) {
+            cell.font = isTableHeader ? fontHeader : fontSubHeader;
+            cell.fill = isTableHeader ? fillHeader : fillSubHeader;
+            cell.alignment = alignHeader;
+            cell.border = borderHeader;
+            return;
+          }
+
+          if (isTotal) {
+            cell.font = fontTotal;
+            cell.fill = fillTotal;
+            cell.border = borderTotal;
+          } else if (isSection) {
+            cell.font = fontSection;
+            cell.fill = fillSection;
+            cell.border = borderSection;
+          } else {
+            cell.font = fontData;
+            if (headerRowIdx && r > headerRowIdx) {
+              cell.border = borderCell;
+              if (r % 2 === 1) cell.fill = fillZebra;
+            }
+          }
+
+          // Căn lề & Định dạng phân cách hàng nghìn
+          const sem = colSemantics[c];
+          if (typeof val === 'number') {
+            if (sem === 'stt' || sem === 'code') {
+              cell.alignment = alignCenter;
+              cell.numFmt = '0';
+            } else {
+              cell.alignment = alignRight;
+              if (Number.isInteger(val)) {
+                cell.numFmt = Math.abs(val) >= 1000 ? '#,##0' : '0';
+              } else {
+                if (Math.abs(val) >= 1000) cell.numFmt = '#,##0.00';
+                else if (Math.abs(val) < 0.01 && val !== 0) cell.numFmt = '0.0000';
+                else cell.numFmt = '#,##0.00';
+              }
+            }
+          } else if (val) {
+            const sval = String(val).trim();
+            if ((sem === 'stt' || sem === 'code' || sem === 'unit') && !isTotal) {
+              cell.alignment = alignCenter;
+            } else if (sval.startsWith(':') || ['I', 'II', 'III', 'IV', 'V', 'XL', 'TB', 'VL', 'NC', 'M', 'TT', 'C', 'TL', 'GTGT'].includes(sval)) {
+              cell.alignment = alignCenter;
+            } else {
+              cell.alignment = alignLeft;
+            }
+          }
+        });
+      }
+
+      // 5. Tự động giãn độ rộng cột chống lỗi ###
+      ws.columns.forEach(col => {
+        let maxLen = 0;
+        let hasContent = false;
+        col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+          if (cell.value !== null && cell.value !== undefined) {
+            hasContent = true;
+            const strVal = String(cell.value);
+            if (rowNumber <= 4 && strVal.length > 30) return;
+            const w = typeof cell.value === 'number' && Math.abs(cell.value) >= 1000 ? cell.value.toLocaleString('vi-VN').length : strVal.length;
+            maxLen = Math.max(maxLen, w);
+          }
+        });
+        col.width = hasContent ? Math.min(Math.max(maxLen + 4, 11), 60) : 6;
+      });
+    });
+
+    const outBuf = await workbook.xlsx.writeBuffer();
+    const outBlob = new Blob([outBuf], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const baseName = file.name.replace(/\.(xlsx|xls)$/i, '');
+    currentFixedFontFile = {
+      blob: outBlob,
+      fileName: file.name,
+      downloadName: `${baseName}_ChuanUnicode_DinhDangDep.xlsx`,
+      fileType: 'xlsx',
+      fileSize: outBlob.size,
+      convertedCount: convertedCells,
+      extractedText: ''
+    };
+
+    document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô & kẻ bảng, căn chỉnh chuyên nghiệp ${workbook.worksheets.length} bảng tính`;
+    logOfficeAction('Cứu font & Kẻ bảng Excel', `Đã sửa font và kẻ bảng chuyên nghiệp file ${file.name} (${workbook.worksheets.length} sheets)`);
+    return;
   }
 
-  const arrayBuffer = await file.arrayBuffer();
+  // Phương án dự phòng SheetJS nếu ExcelJS chưa tải xong
+  if (typeof XLSX === 'undefined') {
+    throw new Error('Thư viện xử lý Excel chưa sẵn sàng.');
+  }
+
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
   let convertedCells = 0;
 
@@ -1900,7 +2174,8 @@ async function processExcelFont(file, mode) {
       const cell = sheet[cellAddress];
       if (cell && (cell.t === 's' || typeof cell.v === 'string')) {
         const oldVal = String(cell.v);
-        const newVal = convertVietnameseText(oldVal, mode);
+        let newVal = convertVietnameseText(oldVal, mode);
+        newVal = cleanVietnamesePhrases(newVal);
         if (oldVal !== newVal) {
           cell.v = newVal;
           if (cell.w) cell.w = newVal;
