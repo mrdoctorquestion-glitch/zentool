@@ -152,7 +152,7 @@ function initZenGuardSecurity() {
   // 1. Domain Lock: Khóa mã nguồn chỉ cho phép chạy trên tên miền chính chủ
   try {
     const host = window.location.hostname.toLowerCase();
-    const isAllowed = ['zentool.io.vn', 'www.zentool.io.vn', 'localhost', '127.0.0.1'].some(d => host === d || host.endsWith('.' + d));
+    const isAllowed = window.location.protocol === 'file:' || ['zentool.io.vn', 'www.zentool.io.vn', 'localhost', '127.0.0.1'].some(d => host === d || host.endsWith('.' + d));
     if (!isAllowed) {
       document.documentElement.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:#ef4444;font-family:system-ui,sans-serif;text-align:center;padding:24px;">
@@ -1621,8 +1621,11 @@ async function executeWatermarkPdf() {
   }
 }
 
-// 6. Chuyển Đổi Font Chữ Tiếng Việt Văn Phòng (TCVN3 sang Unicode Chuẩn)
-const TCVN3_CHARS = "àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđÀÁẢÃẠĂẰẮẲẴẶÂẦẤẨẪẬÈÉẺẼẸÊỀẾỂỄỆÌÍỈĨỊÒÓỎÕỌÔỒỐỔỖỘƠỜỚỞỠỢÙÚỦŨỤƯỪỨỬỮỰỲÝỶỸỴĐ";
+// ==============================================================================
+// 6. PHÂN HỆ CỨU LỖI FONT TIẾNG VIỆT TOÀN DIỆN (WORD .DOCX, EXCEL .XLSX, PDF, TEXT)
+// 100% Client-Side trong RAM • Hỗ trợ TCVN3/ABC, VNI-Windows, Unicode Tổ Hợp (NFD)
+// ==============================================================================
+
 const TCVN3_MAP = {
   'µ': 'à', '¸': 'á', '¶': 'ả', '·': 'ã', '¹': 'ạ',
   '¨': 'ă', '»': 'ằ', '¾': 'ắ', '¼': 'ẳ', '½': 'ẵ', 'Æ': 'ặ',
@@ -1636,30 +1639,404 @@ const TCVN3_MAP = {
   'ï': 'ù', 'ó': 'ú', 'ñ': 'ủ', 'ò': 'ũ', 'ô': 'ụ',
   '­': 'ư', 'õ': 'ừ', 'ø': 'ứ', 'ö': 'ử', '÷': 'ữ', 'ù': 'ự',
   'ú': 'ỳ', 'ý': 'ý', 'û': 'ỷ', 'ü': 'ỹ', 'þ': 'ỵ',
-  '®': 'đ', '§': 'Đ'
+  '®': 'đ', '§': 'Đ',
+  // Ký tự hoa TCVN3
+  '¡': 'Ă', '¢': 'Â', '£': 'Ê', '¤': 'Ô', '¥': 'Ơ', '¦': 'Ư'
 };
+
+const VNI_REPLACEMENTS = [
+  // Cụm 2 ký tự (ưu tiên thay thế trước)
+  ['aù', 'á'], ['aø', 'à'], ['aû', 'ả'], ['aõ', 'ã'], ['aï', 'ạ'],
+  ['aé', 'ắ'], ['aè', 'ằ'], ['aú', 'ẳ'], ['aü', 'ẵ'], ['aë', 'ặ'],
+  ['aá', 'ấ'], ['aà', 'ầ'], ['aå', 'ẩ'], ['aã', 'ẫ'], ['aä', 'ậ'],
+  ['eù', 'é'], ['eø', 'è'], ['eû', 'ẻ'], ['eõ', 'ẽ'], ['eï', 'ẹ'],
+  ['eá', 'ế'], ['eà', 'ề'], ['eå', 'ể'], ['eã', 'ễ'], ['eä', 'ệ'],
+  ['où', 'ó'], ['oø', 'ò'], ['oû', 'ỏ'], ['oõ', 'õ'], ['oï', 'ọ'],
+  ['oá', 'ố'], ['oà', 'ồ'], ['oå', 'ổ'], ['oã', 'ỗ'], ['oä', 'ộ'],
+  ['ôù', 'ớ'], ['ôø', 'ờ'], ['ôû', 'ở'], ['ôõ', 'ỡ'], ['ôï', 'ợ'],
+  ['uù', 'ú'], ['uø', 'ù'], ['uû', 'ủ'], ['uõ', 'ũ'], ['uï', 'ụ'],
+  ['öù', 'ứ'], ['öø', 'ừ'], ['öû', 'ử'], ['öõ', 'ữ'], ['öï', 'ự'],
+  ['yù', 'ý'], ['yø', 'ỳ'], ['yû', 'ỷ'], ['yõ', 'ỹ'],
+  // Chữ hoa 2 ký tự
+  ['AÙ', 'Á'], ['AØ', 'À'], ['AÛ', 'Ả'], ['AÕ', 'Ã'], ['AÏ', 'Ạ'],
+  ['EÙ', 'É'], ['EØ', 'È'], ['EÛ', 'Ẻ'], ['EÕ', 'Ẽ'], ['EÏ', 'Ẹ'],
+  ['OÙ', 'Ó'], ['OØ', 'Ò'], ['OÛ', 'Ỏ'], ['OÕ', 'Õ'], ['OÏ', 'Ọ'],
+  ['UÙ', 'Ú'], ['UØ', 'Ù'], ['UÛ', 'Ủ'], ['UÕ', 'Ũ'], ['UÏ', 'Ụ'],
+  ['YÙ', 'Ý'], ['YØ', 'Ỳ'], ['YÛ', 'Ỷ'], ['YÕ', 'Ỹ'],
+  // Ký tự đơn lẻ
+  ['aê', 'ă'], ['AÊ', 'Ă'],
+  ['aâ', 'â'], ['AÂ', 'Â'],
+  ['eâ', 'ê'], ['EÂ', 'Ê'],
+  ['oâ', 'ô'], ['OÂ', 'Ô'],
+  ['ô', 'ơ'], ['Ô', 'Ơ'],
+  ['ö', 'ư'], ['Ö', 'Ư'],
+  ['ñ', 'đ'], ['Ñ', 'Đ'],
+  ['í', 'í'], ['ì', 'ì'], ['ỉ', 'ỉ'], ['ĩ', 'ĩ'], ['ị', 'ị'],
+  ['î', 'ỵ'], ['Î', 'Ỵ']
+];
+
+// Hàm chuyển đổi văn bản tổng hợp
+function convertVietnameseText(str, mode) {
+  if (!str || typeof str !== 'string') return str || '';
+  
+  if (!mode || mode === 'auto') {
+    // Đếm số lượng đặc trưng để nhận diện chính xác bảng mã nguồn
+    let tcvnCount = 0;
+    for (let i = 0; i < str.length; i++) {
+      if (TCVN3_MAP[str[i]] !== undefined) tcvnCount++;
+    }
+
+    let vniCount = 0;
+    for (const [pattern] of VNI_REPLACEMENTS) {
+      if (str.includes(pattern)) vniCount++;
+    }
+
+    if (tcvnCount >= vniCount && tcvnCount > 0) {
+      return convertTcvnString(str).normalize('NFC');
+    } else if (vniCount > 0) {
+      return convertVniString(str).normalize('NFC');
+    }
+    return str.normalize('NFC');
+  }
+
+  if (mode === 'tcvn3') {
+    return convertTcvnString(str).normalize('NFC');
+  }
+  if (mode === 'vni') {
+    return convertVniString(str).normalize('NFC');
+  }
+  if (mode === 'unicode-tohop') {
+    return str.normalize('NFC');
+  }
+
+  return str.normalize('NFC');
+}
+
+function convertTcvnString(str) {
+  let out = '';
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    out += TCVN3_MAP[c] !== undefined ? TCVN3_MAP[c] : c;
+  }
+  return out;
+}
+
+function convertVniString(str) {
+  let out = str;
+  for (const [oldVal, newVal] of VNI_REPLACEMENTS) {
+    if (out.includes(oldVal)) {
+      out = out.split(oldVal).join(newVal);
+    }
+  }
+  return out;
+}
+
+// Chuyển đổi Sub-tabs trong card Cứu Font
+function switchFontSubTab(tab) {
+  const fileBtn = document.getElementById('font-tab-file-btn');
+  const textBtn = document.getElementById('font-tab-text-btn');
+  const filePanel = document.getElementById('font-panel-file');
+  const textPanel = document.getElementById('font-panel-text');
+
+  if (tab === 'file') {
+    fileBtn.className = "flex-1 py-1.5 rounded-lg bg-white dark:bg-slate-700 shadow-xs text-emerald-600 dark:text-emerald-400 transition flex items-center justify-center gap-1.5 cursor-pointer";
+    textBtn.className = "flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer";
+    filePanel.classList.remove('hidden');
+    textPanel.classList.add('hidden');
+  } else {
+    textBtn.className = "flex-1 py-1.5 rounded-lg bg-white dark:bg-slate-700 shadow-xs text-emerald-600 dark:text-emerald-400 transition flex items-center justify-center gap-1.5 cursor-pointer";
+    fileBtn.className = "flex-1 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer";
+    textPanel.classList.remove('hidden');
+    filePanel.classList.add('hidden');
+  }
+}
+
+// Trạng thái file đã sửa font sẵn sàng tải về
+let currentFixedFontFile = {
+  blob: null,
+  fileName: '',
+  downloadName: '',
+  fileType: '',
+  fileSize: 0,
+  convertedCount: 0,
+  extractedText: ''
+};
+
+// Xử lý nạp file (Word, Excel, PDF)
+async function handleFontFileUpload(file) {
+  if (!file) return;
+
+  const fileName = file.name;
+  const ext = fileName.split('.').pop().toLowerCase();
+  const validExts = ['docx', 'xlsx', 'xls', 'pdf'];
+
+  if (!validExts.includes(ext)) {
+    alert('Định dạng tệp không được hỗ trợ. Vui lòng tải lên file Word (.docx), Excel (.xlsx, .xls) hoặc PDF (.pdf).');
+    return;
+  }
+
+  const dropzone = document.getElementById('font-file-dropzone');
+  const statusCard = document.getElementById('font-file-status');
+  const iconEl = document.getElementById('font-file-icon');
+  const nameEl = document.getElementById('font-file-name');
+  const metaEl = document.getElementById('font-file-meta');
+  const badgeEl = document.getElementById('font-file-badge');
+  const pdfBox = document.getElementById('font-pdf-preview-box');
+  const encodingMode = document.getElementById('font-encoding-select')?.value || 'auto';
+
+  // Hiển thị giao diện nạp file
+  dropzone.classList.add('hidden');
+  statusCard.classList.remove('hidden');
+  pdfBox.classList.add('hidden');
+
+  nameEl.textContent = fileName;
+  metaEl.textContent = `${(file.size / 1024).toFixed(1)} KB • Đang phân tích mã nguồn...`;
+  badgeEl.className = "px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 animate-pulse";
+  badgeEl.innerHTML = `<i class="ri-loader-4-line animate-spin"></i> Đang sửa lỗi font...`;
+
+  if (ext === 'docx') {
+    iconEl.className = "ri-file-word-2-fill text-2xl text-blue-600";
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    iconEl.className = "ri-file-excel-2-fill text-2xl text-emerald-600";
+  } else {
+    iconEl.className = "ri-file-pdf-fill text-2xl text-rose-600";
+  }
+
+  try {
+    if (ext === 'docx') {
+      await processWordDocxFont(file, encodingMode);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      await processExcelFont(file, encodingMode);
+    } else if (ext === 'pdf') {
+      await processPdfFont(file, encodingMode);
+    }
+
+    badgeEl.className = "px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
+    badgeEl.innerHTML = `<i class="ri-checkbox-circle-line"></i> Đã cứu font thành công`;
+    showToast(`✅ Đã cứu font thành công tệp ${fileName}!`);
+
+  } catch (err) {
+    console.error("Font Fix Error:", err);
+    badgeEl.className = "px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300";
+    badgeEl.innerHTML = `<i class="ri-error-warning-line"></i> Lỗi xử lý`;
+    metaEl.textContent = `Lỗi: ${err.message}`;
+    alert(`Không thể xử lý file: ${err.message}`);
+  }
+}
+
+// 1. Sửa Lỗi Font Cho File Word (.docx)
+async function processWordDocxFont(file, mode) {
+  if (typeof JSZip === 'undefined') {
+    throw new Error('Thư viện JSZip chưa sẵn sàng.');
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  let convertedCount = 0;
+
+  const targetXmls = [];
+  zip.forEach((relativePath, zipEntry) => {
+    if (relativePath.startsWith('word/') && relativePath.endsWith('.xml') && !relativePath.includes('settings')) {
+      targetXmls.push(zipEntry);
+    }
+  });
+
+  for (const entry of targetXmls) {
+    let xmlContent = await entry.async('string');
+
+    // Chuyển đổi nội dung văn bản bên trong các thẻ <w:t>...</w:t>
+    xmlContent = xmlContent.replace(/(<w:t[^>]*>)([\s\S]*?)(<\/w:t>)/g, (match, openTag, textContent, closeTag) => {
+      const fixedText = convertVietnameseText(textContent, mode);
+      if (fixedText !== textContent) convertedCount++;
+      return openTag + fixedText + closeTag;
+    });
+
+    // Tự động thay thế định nghĩa font cũ (.VnTime, VNI-Times) sang Times New Roman / Arial chuẩn Unicode
+    xmlContent = xmlContent.replace(/\.VnTimeH|\.VnTime|VNI-Times/gi, 'Times New Roman');
+    xmlContent = xmlContent.replace(/\.VnArialH|\.VnArial|VNI-Helve/gi, 'Arial');
+    xmlContent = xmlContent.replace(/\.VnCourierH|\.VnCourier|VNI-Courier/gi, 'Courier New');
+    xmlContent = xmlContent.replace(/\.Vn[A-Za-z0-9]+/g, 'Times New Roman');
+    xmlContent = xmlContent.replace(/VNI-[A-Za-z0-9]+/g, 'Times New Roman');
+
+    zip.file(entry.name, xmlContent);
+  }
+
+  const outBlob = await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+
+  const baseName = file.name.replace(/\.docx$/i, '');
+  currentFixedFontFile = {
+    blob: outBlob,
+    fileName: file.name,
+    downloadName: `${baseName}_ChuanUnicode.docx`,
+    fileType: 'docx',
+    fileSize: outBlob.size,
+    convertedCount: convertedCount,
+    extractedText: ''
+  };
+
+  document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCount} đoạn văn bản sang Times New Roman chuẩn Unicode`;
+  logOfficeAction('Cứu font Word', `Đã sửa hoàn chỉnh lỗi font file Word ${file.name} (${convertedCount} đoạn text)`);
+}
+
+// 2. Sửa Lỗi Font Cho File Excel (.xlsx, .xls)
+async function processExcelFont(file, mode) {
+  if (typeof XLSX === 'undefined') {
+    throw new Error('Thư viện XLSX chưa sẵn sàng.');
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  let convertedCells = 0;
+
+  workbook.SheetNames.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) return;
+
+    for (const cellAddress in sheet) {
+      if (cellAddress.startsWith('!')) continue;
+      const cell = sheet[cellAddress];
+      if (cell && (cell.t === 's' || typeof cell.v === 'string')) {
+        const oldVal = String(cell.v);
+        const newVal = convertVietnameseText(oldVal, mode);
+        if (oldVal !== newVal) {
+          cell.v = newVal;
+          if (cell.w) cell.w = newVal;
+          convertedCells++;
+        }
+      }
+    }
+  });
+
+  const outBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const outBlob = new Blob([outBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  const baseName = file.name.replace(/\.(xlsx|xls)$/i, '');
+  currentFixedFontFile = {
+    blob: outBlob,
+    fileName: file.name,
+    downloadName: `${baseName}_ChuanUnicode.xlsx`,
+    fileType: 'xlsx',
+    fileSize: outBlob.size,
+    convertedCount: convertedCells,
+    extractedText: ''
+  };
+
+  document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô dữ liệu sang Unicode chuẩn`;
+  logOfficeAction('Cứu font Excel', `Đã sửa hoàn chỉnh lỗi font file Excel ${file.name} (${convertedCells} ô dữ liệu)`);
+}
+
+// 3. Sửa Lỗi Font Cho File PDF (.pdf)
+async function processPdfFont(file, mode) {
+  if (typeof pdfjsLib === 'undefined') {
+    throw new Error('Thư viện pdfjs-dist chưa sẵn sàng.');
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const numPages = pdf.numPages;
+  const pageSections = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let pageStr = '';
+    let lastY = null;
+
+    for (const item of content.items) {
+      if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+        pageStr += '\n';
+      }
+      pageStr += item.str + ' ';
+      lastY = item.transform[5];
+    }
+
+    const convertedText = convertVietnameseText(pageStr, mode);
+    pageSections.push(`================ TRANG ${i} / ${numPages} ================\n` + convertedText);
+  }
+
+  const fullText = pageSections.join('\n\n');
+  const outBlob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+
+  const baseName = file.name.replace(/\.pdf$/i, '');
+  currentFixedFontFile = {
+    blob: outBlob,
+    fileName: file.name,
+    downloadName: `${baseName}_ChuanUnicode.txt`,
+    fileType: 'pdf',
+    fileSize: outBlob.size,
+    convertedCount: numPages,
+    extractedText: fullText
+  };
+
+  document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã trích xuất và cứu font ${numPages} trang PDF`;
+  const pdfBox = document.getElementById('font-pdf-preview-box');
+  const pdfArea = document.getElementById('font-pdf-text-area');
+  pdfBox.classList.remove('hidden');
+  pdfArea.value = fullText;
+
+  logOfficeAction('Cứu font PDF', `Đã trích xuất & cứu sạch font ${numPages} trang file PDF ${file.name}`);
+}
+
+// Tải file đã cứu font về máy
+function downloadFixedFontFile() {
+  if (!currentFixedFontFile.blob) {
+    alert('Chưa có file nào được xử lý.');
+    return;
+  }
+
+  const url = URL.createObjectURL(currentFixedFontFile.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = currentFixedFontFile.downloadName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  showToast(`💾 Đã tải xuống tệp: ${currentFixedFontFile.downloadName}`);
+}
+
+// Sao chép văn bản PDF đã cứu font
+function copyPdfFixedText() {
+  if (!currentFixedFontFile.extractedText) return;
+  navigator.clipboard.writeText(currentFixedFontFile.extractedText);
+  showToast('📋 Đã sao chép toàn bộ văn bản PDF chuẩn Unicode vào bộ nhớ tạm!');
+}
+
+// Đổi file khác
+function resetFontFileInput() {
+  currentFixedFontFile = { blob: null, fileName: '', downloadName: '', fileType: '', fileSize: 0, convertedCount: 0, extractedText: '' };
+  const inputEl = document.getElementById('font-file-input');
+  if (inputEl) inputEl.value = '';
+  document.getElementById('font-file-dropzone')?.classList.remove('hidden');
+  document.getElementById('font-file-status')?.classList.add('hidden');
+  document.getElementById('font-pdf-preview-box')?.classList.add('hidden');
+}
+
+// Sửa font nhanh cho ô Textarea
+function convertTcvn3ToUnicode() {
+  const input = document.getElementById('font-input-text').value;
+  if (!input) {
+    alert('Vui lòng dán đoạn văn bản cần sửa font vào ô trên.');
+    return;
+  }
+
+  const mode = document.getElementById('font-encoding-select')?.value || 'auto';
+  const output = convertVietnameseText(input, mode);
+
+  document.getElementById('font-output-text').value = output;
+  logOfficeAction('Sửa lỗi font text', `Đã chuyển đổi đoạn văn bản (${input.length} ký tự) sang Unicode chuẩn`);
+  showToast('⚡ Đã sửa lỗi font tiếng Việt thành công!');
+}
 
 function clearFontConverter() {
   document.getElementById('font-input-text').value = '';
   document.getElementById('font-output-text').value = '';
-}
-
-function convertTcvn3ToUnicode() {
-  const input = document.getElementById('font-input-text').value;
-  if (!input) {
-    alert('Vui lòng dán văn bản bị lỗi font vào ô bên trái.');
-    return;
-  }
-
-  let output = '';
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i];
-    output += TCVN3_MAP[ch] !== undefined ? TCVN3_MAP[ch] : ch;
-  }
-
-  document.getElementById('font-output-text').value = output;
-  logOfficeAction('Sửa lỗi font', `Đã chuyển đổi đoạn văn bản (${input.length} ký tự) sang Unicode chuẩn`);
-  showToast('⚡ Đã sửa lỗi font tiếng Việt thành công!');
 }
 
 function copyConvertedFont() {
