@@ -56,6 +56,9 @@
   
   <!-- SheetJS (xlsx) for Client-Side Excel Exporting -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- ExcelJS for Client-Side Professional Excel Styling & Formatting -->
+  <script src="vendor/exceljs.min.js"></script>
+  <script>if (typeof ExcelJS === 'undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"><\/script>')</script>
 
   <!-- JSZip for Client-Side Zip Creation (Tải hàng loạt ảnh) -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -953,6 +956,20 @@
 
           <!-- PANEL 1: SỬA CẢ FILE (WORD, EXCEL, PDF) -->
           <div id="font-panel-file" class="space-y-3">
+            <!-- Tùy chọn Tự Động Định Dạng & Kẻ Bảng Chuyên Nghiệp -->
+            <div class="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-100 select-none">
+                  <input type="checkbox" id="font-auto-style-excel" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800" />
+                  <span>🎨 Tự động căn chỉnh, kẻ bảng &amp; tạo kiểu chuyên nghiệp (Chuẩn hồ sơ dự toán / kế toán)</span>
+                </label>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 uppercase tracking-wider shrink-0">Khuyên Dùng</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 pl-6 leading-relaxed">
+                Tự động kẻ viền bảng (<code class="text-[10px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700">Thin Border</code>), viền kép tổng cộng (<code class="text-[10px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700">Double Bottom Border</code>), tô màu Navy tiêu đề, phân nhóm vật tư, định dạng phân cách hàng nghìn (<code class="text-[10px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700">108,965,556,000</code>), cố định dòng tiêu đề (Freeze Panes) &amp; tự giãn độ rộng cột chống tràn <code class="text-[10px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-200 dark:border-slate-700">###</code>.
+              </p>
+            </div>
+
             <!-- Dropzone -->
             <div id="font-file-dropzone" onclick="document.getElementById('font-file-input').click()" class="border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 rounded-xl p-5 text-center cursor-pointer bg-emerald-50/30 dark:bg-emerald-950/20 transition group">
               <input type="file" id="font-file-input" class="hidden" accept=".docx,.xlsx,.xls,.pdf" onchange="if(this.files &amp;&amp; this.files[0]) handleFontFileUpload(this.files[0])" />
