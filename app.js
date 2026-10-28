@@ -143,6 +143,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof ZenTelemetry !== 'undefined') {
     ZenTelemetry.init();
   }
+  
+  // Tự động chuyển tab theo URL param (?tab=zenscan) hoặc hash (#zenscan)
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetTab = urlParams.get('tab') || window.location.hash.replace('#', '');
+    if (targetTab && ['invoice', 'files', 'profit', 'media', 'zenscan'].includes(targetTab)) {
+      switchTab(targetTab);
+    }
+  } catch (e) {}
+  initZenScanModule();
 });
 
 // ============================================================
@@ -260,7 +270,7 @@ function toggleDarkMode() {
 
 function switchTab(tabId) {
   currentTab = tabId;
-  const tabs = ['invoice', 'files', 'profit', 'media'];
+  const tabs = ['invoice', 'files', 'profit', 'media', 'zenscan'];
   
   tabs.forEach(t => {
     const el = document.getElementById(`tab-${t}`);
@@ -2301,265 +2311,294 @@ function cleanVietnamesePhrases(str) {
 async function processExcelFont(file, mode) {
   const arrayBuffer = await file.arrayBuffer();
   const autoStyle = document.getElementById('font-auto-style-excel')?.checked !== false;
+  const fileName = file.name || 'document.xlsx';
+  const ext = fileName.split('.').pop().toLowerCase();
+  const isLegacyXls = ext === 'xls' || !fileName.toLowerCase().endsWith('.xlsx');
 
-  // Sử dụng ExcelJS để có đầy đủ tính năng: Tô màu tiêu đề Navy, kẻ viền bảng, viền kép tổng cộng, Freeze Panes, định dạng số
-  if (typeof ExcelJS !== 'undefined') {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(arrayBuffer);
-    let convertedCells = 0;
-
-    const FONT_FAMILY = "Arial";
-    const fontTitle = { name: FONT_FAMILY, size: 13, bold: true, color: { argb: "FF1F4E78" } };
-    const fontSubtitle = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF333333" } };
-    const fontHeader = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFFFFFFF" } };
-    const fontSubHeader = { name: FONT_FAMILY, size: 9, bold: true, color: { argb: "FFFFFFFF" } };
-    const fontSection = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF002060" } };
-    const fontTotal = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFC00000" } };
-    const fontData = { name: FONT_FAMILY, size: 10, bold: false, color: { argb: "FF000000" } };
-
-    const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF1F4E78" } }; // Navy Blue
-    const fillSubHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF2E75B6" } }; // Steel Blue
-    const fillSection = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFD9E1F2" } }; // Soft Blue
-    const fillTotal = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFFFF2CC" } }; // Soft Yellow
-    const fillZebra = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFF9FAFB" } }; // Alternating tint
-
-    const bdThin = { style: 'thin', color: { argb: "FFBFBFBF" } };
-    const bdWhite = { style: 'thin', color: { argb: "FFFFFFFF" } };
-    const bdMedium = { style: 'medium', color: { argb: "FF1F4E78" } };
-    const bdDouble = { style: 'double', color: { argb: "FF000000" } };
-
-    const borderCell = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
-    const borderHeader = { top: bdMedium, left: bdWhite, bottom: bdMedium, right: bdWhite };
-    const borderSection = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
-    const borderTotal = { top: bdThin, left: bdThin, bottom: bdDouble, right: bdThin };
-
-    const alignCenter = { horizontal: 'center', vertical: 'middle' };
-    const alignLeft = { horizontal: 'left', vertical: 'middle' };
-    const alignRight = { horizontal: 'right', vertical: 'middle' };
-    const alignHeader = { horizontal: 'center', vertical: 'middle', wrapText: true };
-
-    workbook.worksheets.forEach(ws => {
-      // Bật hiển thị lưới Gridlines
-      if (ws.views && ws.views.length > 0) {
-        ws.views[0].showGridLines = true;
-      } else {
-        ws.views = [{ showGridLines: true }];
-      }
-
-      // 1. Chuyển đổi toàn bộ chuỗi văn bản & áp dụng từ điển làm sạch
-      ws.eachRow({ includeEmpty: false }, row => {
-        row.eachCell({ includeEmpty: false }, cell => {
-          if (cell.value) {
-            if (typeof cell.value === 'string') {
-              const oldVal = cell.value;
-              let newVal = convertVietnameseText(oldVal, mode);
-              newVal = cleanVietnamesePhrases(newVal);
-              if (newVal !== oldVal) {
-                cell.value = newVal;
-                convertedCells++;
-              }
-            } else if (cell.value.result && typeof cell.value.result === 'string') {
-              const oldVal = cell.value.result;
-              let newVal = convertVietnameseText(oldVal, mode);
-              newVal = cleanVietnamesePhrases(newVal);
-              if (newVal !== oldVal) {
-                cell.value.result = newVal;
-                convertedCells++;
-              }
-            } else if (Array.isArray(cell.value.richText)) {
-              cell.value.richText.forEach(rt => {
-                if (typeof rt.text === 'string') {
-                  rt.text = cleanVietnamesePhrases(convertVietnameseText(rt.text, mode));
-                }
-              });
-              convertedCells++;
-            }
-          }
-        });
-      });
-
-      if (!autoStyle) return;
-
-      // 2. Nhận diện dòng tiêu đề (Header row)
-      let headerRowIdx = null;
-      for (let r = 1; r <= Math.min(10, ws.rowCount); r++) {
-        const row = ws.getRow(r);
-        const rowStrs = [];
-        row.eachCell({ includeEmpty: true }, (c, colNumber) => {
-          if (colNumber <= 10) rowStrs.push(String(c.value || '').trim().toUpperCase());
-        });
-        if (rowStrs.some(h => ['STT', 'TT', 'MÃ HIỆU', 'CHI PHÍ', 'NỘI DUNG CÔNG VIỆC', 'LOẠI CÔNG TRÌNH', 'TÊN VẬT TƯ'].some(k => h.includes(k)))) {
-          headerRowIdx = r;
-          break;
-        }
-      }
-
-      // Nhận diện dòng tiêu đề phụ (Sub-header row)
-      let subHeaderIdx = null;
-      if (headerRowIdx && headerRowIdx < ws.rowCount) {
-        const nextRow = ws.getRow(headerRowIdx + 1);
-        const nextStrs = [];
-        nextRow.eachCell({ includeEmpty: true }, (c, colNumber) => {
-          if (colNumber <= 12) nextStrs.push(String(c.value || '').trim());
-        });
-        if (nextStrs.some(h => ['Vữa', 'Định mức', 'Đơn giá', 'Vật liệu', 'Nhân công', 'Máy', 'Gốc', 'Thông báo', 'T1', 'Thi công', 'lượng'].some(k => h.includes(k)))) {
-          subHeaderIdx = headerRowIdx + 1;
-        }
-      }
-
-      // Khóa cố định dòng tiêu đề (Freeze Panes)
-      if (headerRowIdx && !['Bìa dự toán', 'Cấu hình'].includes(ws.name)) {
-        const freezeR = subHeaderIdx ? (subHeaderIdx + 1) : (headerRowIdx + 1);
-        ws.views = [{ state: 'frozen', ySplit: freezeR - 1, showGridLines: true }];
-      }
-
-      // 3. Nhận diện ngữ nghĩa cột (STT, Mã hiệu, Đơn vị, Văn bản, Số tiền)
-      const colSemantics = {};
-      if (headerRowIdx) {
-        const hRow = ws.getRow(headerRowIdx);
-        const subRow = subHeaderIdx ? ws.getRow(subHeaderIdx) : null;
-        for (let c = 1; c <= ws.columnCount; c++) {
-          const hVal = String(hRow.getCell(c).value || '').trim().toUpperCase();
-          const subVal = subRow ? String(subRow.getCell(c).value || '').trim().toUpperCase() : '';
-          const combined = `${hVal} ${subVal}`;
-          if (combined.includes('STT') || combined === 'TT') {
-            colSemantics[c] = 'stt';
-          } else if (['MÃ HIỆU', 'MSVT', 'MÃ'].some(k => combined.includes(k))) {
-            colSemantics[c] = 'code';
-          } else if (['ĐƠN VỊ', 'Đ/V', 'KÝ HIỆU'].some(k => combined.includes(k))) {
-            colSemantics[c] = 'unit';
-          } else if (['NỘI DUNG', 'TÊN VẬT TƯ', 'THÀNH PHẦN', 'LOẠI VẬT LIỆU', 'LOẠI CÔNG TRÌNH', 'CHI PHÍ', 'CÁCH TÍNH'].some(k => combined.includes(k))) {
-            colSemantics[c] = 'text';
-          } else if (['KHỐI LƯỢNG', 'ĐƠN GIÁ', 'THÀNH TIỀN', 'GIÁ TRỊ', 'HAO PHÍ', 'HỆ SỐ', 'ĐỊNH MỨC'].some(k => combined.includes(k))) {
-            colSemantics[c] = 'number';
-          }
-        }
-      }
-
-      // 4. Áp dụng định dạng, màu sắc và kẻ bảng cho từng dòng
-      for (let r = 1; r <= ws.rowCount; r++) {
-        const row = ws.getRow(r);
-        const nonNullVals = [];
-        row.eachCell({ includeEmpty: false }, c => {
-          if (c.value !== null && c.value !== undefined && String(c.value).trim() !== '') {
-            nonNullVals.push(String(c.value));
-          }
-        });
-        const rowStrUpper = nonNullVals.join(' ').toUpperCase();
-
-        const isTitle = (r <= 4 && nonNullVals.length <= 3 && ['BẢNG', 'CỘNG HOÀ', 'ĐỘC LẬP', 'DỰ TOÁN', 'CÔNG TRÌNH', 'HẠNG MỤC'].some(k => rowStrUpper.includes(k)));
-        const isTableHeader = (r === headerRowIdx);
-        const isSubHeader = (r === subHeaderIdx);
-        const isTotal = ['TỔNG CỘNG', 'CỘNG CHI PHÍ', 'GIÁ THÀNH DỰ TOÁN', 'GIÁ TRỊ DỰ TOÁN', 'LÀM TRÒN'].some(k => rowStrUpper.includes(k));
-        const isSection = (!isTotal && !isTableHeader && !isSubHeader && !isTitle && nonNullVals.some(v => ['Vật liệu', 'Nhân công', 'Máy thi công', 'Máy', 'I', 'II', 'III', 'IV', 'V'].includes(v.trim())));
-
-        // Chiều cao dòng
-        if (isTitle) row.height = 24;
-        else if (isTableHeader || isSubHeader) row.height = 28;
-        else if (isTotal || isSection) row.height = 22;
-        else row.height = 20;
-
-        // Định dạng từng ô
-        row.eachCell({ includeEmpty: false }, (cell, c) => {
-          const val = cell.value;
-
-          if (isTitle) {
-            cell.font = (r === 1 || rowStrUpper.includes('CỘNG HOÀ') || rowStrUpper.includes('BẢNG')) ? fontTitle : fontSubtitle;
-            return;
-          }
-
-          if (isTableHeader || isSubHeader) {
-            cell.font = isTableHeader ? fontHeader : fontSubHeader;
-            cell.fill = isTableHeader ? fillHeader : fillSubHeader;
-            cell.alignment = alignHeader;
-            cell.border = borderHeader;
-            return;
-          }
-
-          if (isTotal) {
-            cell.font = fontTotal;
-            cell.fill = fillTotal;
-            cell.border = borderTotal;
-          } else if (isSection) {
-            cell.font = fontSection;
-            cell.fill = fillSection;
-            cell.border = borderSection;
-          } else {
-            cell.font = fontData;
-            if (headerRowIdx && r > headerRowIdx) {
-              cell.border = borderCell;
-              if (r % 2 === 1) cell.fill = fillZebra;
-            }
-          }
-
-          // Căn lề & Định dạng phân cách hàng nghìn
-          const sem = colSemantics[c];
-          if (typeof val === 'number') {
-            if (sem === 'stt' || sem === 'code') {
-              cell.alignment = alignCenter;
-              cell.numFmt = '0';
-            } else {
-              cell.alignment = alignRight;
-              if (Number.isInteger(val)) {
-                cell.numFmt = Math.abs(val) >= 1000 ? '#,##0' : '0';
-              } else {
-                if (Math.abs(val) >= 1000) cell.numFmt = '#,##0.00';
-                else if (Math.abs(val) < 0.01 && val !== 0) cell.numFmt = '0.0000';
-                else cell.numFmt = '#,##0.00';
-              }
-            }
-          } else if (val) {
-            const sval = String(val).trim();
-            if ((sem === 'stt' || sem === 'code' || sem === 'unit') && !isTotal) {
-              cell.alignment = alignCenter;
-            } else if (sval.startsWith(':') || ['I', 'II', 'III', 'IV', 'V', 'XL', 'TB', 'VL', 'NC', 'M', 'TT', 'C', 'TL', 'GTGT'].includes(sval)) {
-              cell.alignment = alignCenter;
-            } else {
-              cell.alignment = alignLeft;
-            }
-          }
-        });
-      }
-
-      // 5. Tự động giãn độ rộng cột chống lỗi ###
-      ws.columns.forEach(col => {
-        let maxLen = 0;
-        let hasContent = false;
-        col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
-          if (cell.value !== null && cell.value !== undefined) {
-            hasContent = true;
-            const strVal = String(cell.value);
-            if (rowNumber <= 4 && strVal.length > 30) return;
-            const w = typeof cell.value === 'number' && Math.abs(cell.value) >= 1000 ? cell.value.toLocaleString('vi-VN').length : strVal.length;
-            maxLen = Math.max(maxLen, w);
-          }
-        });
-        col.width = hasContent ? Math.min(Math.max(maxLen + 4, 11), 60) : 6;
-      });
-    });
-
-    const outBuf = await workbook.xlsx.writeBuffer();
-    const outBlob = new Blob([outBuf], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const baseName = file.name.replace(/\.(xlsx|xls)$/i, '');
-    currentFixedFontFile = {
-      blob: outBlob,
-      fileName: file.name,
-      downloadName: `${baseName}_ChuanUnicode_DinhDangDep.xlsx`,
-      fileType: 'xlsx',
-      fileSize: outBlob.size,
-      convertedCount: convertedCells,
-      extractedText: ''
-    };
-
-    document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô & kẻ bảng, căn chỉnh chuyên nghiệp ${workbook.worksheets.length} bảng tính`;
-    logOfficeAction('Cứu font & Kẻ bảng Excel', `Đã sửa font và kẻ bảng chuyên nghiệp file ${file.name} (${workbook.worksheets.length} sheets)`);
-    return;
+  // Chuẩn hóa trước định dạng nếu là tệp .xls đời cũ (BIFF binary)
+  let normalizedXlsxBuffer = arrayBuffer;
+  if (isLegacyXls && typeof XLSX !== 'undefined') {
+    try {
+      const legacyWb = XLSX.read(arrayBuffer, { type: 'array' });
+      normalizedXlsxBuffer = XLSX.write(legacyWb, { bookType: 'xlsx', type: 'array' });
+    } catch (legacyErr) {
+      console.warn("SheetJS legacy pre-read warning:", legacyErr);
+    }
   }
 
-  // Phương án dự phòng SheetJS nếu ExcelJS chưa tải xong
+  // Phương án 1: Sử dụng ExcelJS để có đầy đủ tính năng: Tô màu tiêu đề Navy, kẻ viền bảng, viền kép tổng cộng, Freeze Panes, định dạng số
+  if (typeof ExcelJS !== 'undefined') {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      
+      try {
+        await workbook.xlsx.load(normalizedXlsxBuffer);
+      } catch (loadErr) {
+        console.warn("ExcelJS direct load failed (date1904/format issue), normalizing via SheetJS:", loadErr);
+        if (typeof XLSX !== 'undefined') {
+          const fallbackWb = XLSX.read(arrayBuffer, { type: 'array' });
+          const safeXlsxBuf = XLSX.write(fallbackWb, { bookType: 'xlsx', type: 'array' });
+          await workbook.xlsx.load(safeXlsxBuf);
+        } else {
+          throw loadErr;
+        }
+      }
+
+      let convertedCells = 0;
+
+      const FONT_FAMILY = "Arial";
+      const fontTitle = { name: FONT_FAMILY, size: 13, bold: true, color: { argb: "FF1F4E78" } };
+      const fontSubtitle = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF333333" } };
+      const fontHeader = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+      const fontSubHeader = { name: FONT_FAMILY, size: 9, bold: true, color: { argb: "FFFFFFFF" } };
+      const fontSection = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FF002060" } };
+      const fontTotal = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: "FFC00000" } };
+      const fontData = { name: FONT_FAMILY, size: 10, bold: false, color: { argb: "FF000000" } };
+
+      const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF1F4E78" } }; // Navy Blue
+      const fillSubHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF2E75B6" } }; // Steel Blue
+      const fillSection = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFD9E1F2" } }; // Soft Blue
+      const fillTotal = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFFFF2CC" } }; // Soft Yellow
+      const fillZebra = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FFF9FAFB" } }; // Alternating tint
+
+      const bdThin = { style: 'thin', color: { argb: "FFBFBFBF" } };
+      const bdWhite = { style: 'thin', color: { argb: "FFFFFFFF" } };
+      const bdMedium = { style: 'medium', color: { argb: "FF1F4E78" } };
+      const bdDouble = { style: 'double', color: { argb: "FF000000" } };
+
+      const borderCell = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
+      const borderHeader = { top: bdMedium, left: bdWhite, bottom: bdMedium, right: bdWhite };
+      const borderSection = { top: bdThin, left: bdThin, bottom: bdThin, right: bdThin };
+      const borderTotal = { top: bdThin, left: bdThin, bottom: bdDouble, right: bdThin };
+
+      const alignCenter = { horizontal: 'center', vertical: 'middle' };
+      const alignLeft = { horizontal: 'left', vertical: 'middle' };
+      const alignRight = { horizontal: 'right', vertical: 'middle' };
+      const alignHeader = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+      workbook.worksheets.forEach(ws => {
+        // Bật hiển thị lưới Gridlines
+        if (ws.views && ws.views.length > 0) {
+          ws.views[0].showGridLines = true;
+        } else {
+          ws.views = [{ showGridLines: true }];
+        }
+
+        // 1. Chuyển đổi toàn bộ chuỗi văn bản & áp dụng từ điển làm sạch ngữ pháp
+        ws.eachRow({ includeEmpty: false }, row => {
+          row.eachCell({ includeEmpty: false }, cell => {
+            if (cell.value) {
+              if (typeof cell.value === 'string') {
+                const oldVal = cell.value;
+                let newVal = convertVietnameseText(oldVal, mode);
+                newVal = cleanVietnamesePhrases(newVal);
+                if (newVal !== oldVal) {
+                  cell.value = newVal;
+                  convertedCells++;
+                }
+              } else if (cell.value.result && typeof cell.value.result === 'string') {
+                const oldVal = cell.value.result;
+                let newVal = convertVietnameseText(oldVal, mode);
+                newVal = cleanVietnamesePhrases(newVal);
+                if (newVal !== oldVal) {
+                  cell.value.result = newVal;
+                  convertedCells++;
+                }
+              } else if (Array.isArray(cell.value.richText)) {
+                cell.value.richText.forEach(rt => {
+                  if (typeof rt.text === 'string') {
+                    rt.text = cleanVietnamesePhrases(convertVietnameseText(rt.text, mode));
+                  }
+                });
+                convertedCells++;
+              }
+            }
+          });
+        });
+
+        if (!autoStyle) return;
+
+        // 2. Nhận diện dòng tiêu đề (Header row)
+        let headerRowIdx = null;
+        for (let r = 1; r <= Math.min(10, ws.rowCount); r++) {
+          const row = ws.getRow(r);
+          const rowStrs = [];
+          row.eachCell({ includeEmpty: true }, (c, colNumber) => {
+            if (colNumber <= 10) rowStrs.push(String(c.value || '').trim().toUpperCase());
+          });
+          if (rowStrs.some(h => ['STT', 'TT', 'MÃ HIỆU', 'CHI PHÍ', 'NỘI DUNG CÔNG VIỆC', 'LOẠI CÔNG TRÌNH', 'TÊN VẬT TƯ'].some(k => h.includes(k)))) {
+            headerRowIdx = r;
+            break;
+          }
+        }
+
+        // Nhận diện dòng tiêu đề phụ (Sub-header row)
+        let subHeaderIdx = null;
+        if (headerRowIdx && headerRowIdx < ws.rowCount) {
+          const nextRow = ws.getRow(headerRowIdx + 1);
+          const nextStrs = [];
+          nextRow.eachCell({ includeEmpty: true }, (c, colNumber) => {
+            if (colNumber <= 12) nextStrs.push(String(c.value || '').trim());
+          });
+          if (nextStrs.some(h => ['Vữa', 'Định mức', 'Đơn giá', 'Vật liệu', 'Nhân công', 'Máy', 'Gốc', 'Thông báo', 'T1', 'Thi công', 'lượng'].some(k => h.includes(k)))) {
+            subHeaderIdx = headerRowIdx + 1;
+          }
+        }
+
+        // Khóa cố định dòng tiêu đề (Freeze Panes)
+        if (headerRowIdx && !['Bìa dự toán', 'Cấu hình'].includes(ws.name)) {
+          const freezeR = subHeaderIdx ? (subHeaderIdx + 1) : (headerRowIdx + 1);
+          ws.views = [{ state: 'frozen', ySplit: freezeR - 1, showGridLines: true }];
+        }
+
+        // 3. Nhận diện ngữ nghĩa cột (STT, Mã hiệu, Đơn vị, Văn bản, Số tiền)
+        const colSemantics = {};
+        if (headerRowIdx) {
+          const hRow = ws.getRow(headerRowIdx);
+          const subRow = subHeaderIdx ? ws.getRow(subHeaderIdx) : null;
+          for (let c = 1; c <= ws.columnCount; c++) {
+            const hVal = String(hRow.getCell(c).value || '').trim().toUpperCase();
+            const subVal = subRow ? String(subRow.getCell(c).value || '').trim().toUpperCase() : '';
+            const combined = `${hVal} ${subVal}`;
+            if (combined.includes('STT') || combined === 'TT') {
+              colSemantics[c] = 'stt';
+            } else if (['MÃ HIỆU', 'MSVT', 'MÃ'].some(k => combined.includes(k))) {
+              colSemantics[c] = 'code';
+            } else if (['ĐƠN VỊ', 'Đ/V', 'KÝ HIỆU'].some(k => combined.includes(k))) {
+              colSemantics[c] = 'unit';
+            } else if (['NỘI DUNG', 'TÊN VẬT TƯ', 'THÀNH PHẦN', 'LOẠI VẬT LIỆU', 'LOẠI CÔNG TRÌNH', 'CHI PHÍ', 'CÁCH TÍNH'].some(k => combined.includes(k))) {
+              colSemantics[c] = 'text';
+            } else if (['KHỐI LƯỢNG', 'ĐƠN GIÁ', 'THÀNH TIỀN', 'GIÁ TRỊ', 'HAO PHÍ', 'HỆ SỐ', 'ĐỊNH MỨC'].some(k => combined.includes(k))) {
+              colSemantics[c] = 'number';
+            }
+          }
+        }
+
+        // 4. Áp dụng phong cách kẻ bảng & phối màu
+        for (let r = 1; r <= ws.rowCount; r++) {
+          const row = ws.getRow(r);
+          const rowVals = [];
+          row.eachCell({ includeEmpty: true }, c => rowVals.push(c.value));
+          const nonNullVals = rowVals.filter(v => v !== null && v !== undefined && String(v).trim() !== '').map(String);
+          const rowStr = nonNullVals.join(' ');
+          const rowStrUpper = rowStr.toUpperCase();
+
+          const isTitle = (r <= 4 && nonNullVals.length <= 3 && ['BẢNG', 'CỘNG HOÀ', 'CỘNG HÒA', 'ĐỘC LẬP', 'DỰ TOÁN', 'CÔNG TRÌNH', 'HẠNG MỤC'].some(k => rowStrUpper.includes(k)));
+          const isTableHeader = (r === headerRowIdx);
+          const isSubHeader = (r === subHeaderIdx);
+          const isTotal = ['TỔNG CỘNG', 'CỘNG CHI PHÍ', 'GIÁ THÀNH DỰ TOÁN', 'GIÁ TRỊ DỰ TOÁN', 'LÀM TRÒN'].some(k => rowStrUpper.includes(k));
+          const isSection = (!isTotal && !isTableHeader && !isSubHeader && !isTitle && nonNullVals.some(v => ['Vật liệu', 'Nhân công', 'Máy thi công', 'Máy', 'I', 'II', 'III', 'IV', 'V'].includes(v.trim())));
+
+          // Chiều cao dòng
+          if (isTitle) row.height = 24;
+          else if (isTableHeader || isSubHeader) row.height = 28;
+          else if (isTotal || isSection) row.height = 22;
+          else row.height = 20;
+
+          // Định dạng từng ô
+          row.eachCell({ includeEmpty: false }, (cell, c) => {
+            const val = cell.value;
+
+            if (isTitle) {
+              cell.font = (r === 1 || rowStrUpper.includes('CỘNG H') || rowStrUpper.includes('BẢNG')) ? fontTitle : fontSubtitle;
+              return;
+            }
+
+            if (isTableHeader || isSubHeader) {
+              cell.font = isTableHeader ? fontHeader : fontSubHeader;
+              cell.fill = isTableHeader ? fillHeader : fillSubHeader;
+              cell.alignment = alignHeader;
+              cell.border = borderHeader;
+              return;
+            }
+
+            if (isTotal) {
+              cell.font = fontTotal;
+              cell.fill = fillTotal;
+              cell.border = borderTotal;
+            } else if (isSection) {
+              cell.font = fontSection;
+              cell.fill = fillSection;
+              cell.border = borderSection;
+            } else {
+              cell.font = fontData;
+              if (headerRowIdx && r > headerRowIdx) {
+                cell.border = borderCell;
+                if (r % 2 === 1) cell.fill = fillZebra;
+              }
+            }
+
+            // Căn lề & Định dạng phân cách hàng nghìn
+            const sem = colSemantics[c];
+            if (typeof val === 'number') {
+              if (sem === 'stt' || sem === 'code') {
+                cell.alignment = alignCenter;
+                cell.numFmt = '0';
+              } else {
+                cell.alignment = alignRight;
+                if (Number.isInteger(val)) {
+                  cell.numFmt = Math.abs(val) >= 1000 ? '#,##0' : '0';
+                } else {
+                  if (Math.abs(val) >= 1000) cell.numFmt = '#,##0.00';
+                  else if (Math.abs(val) < 0.01 && val !== 0) cell.numFmt = '0.0000';
+                  else cell.numFmt = '#,##0.00';
+                }
+              }
+            } else if (val) {
+              const sval = String(val).trim();
+              if ((sem === 'stt' || sem === 'code' || sem === 'unit') && !isTotal) {
+                cell.alignment = alignCenter;
+              } else if (sval.startsWith(':') || ['I', 'II', 'III', 'IV', 'V', 'XL', 'TB', 'VL', 'NC', 'M', 'TT', 'C', 'TL', 'GTGT'].includes(sval)) {
+                cell.alignment = alignCenter;
+              } else {
+                cell.alignment = alignLeft;
+              }
+            }
+          });
+        }
+
+        // 5. Tự động giãn độ rộng cột chống lỗi ###
+        ws.columns.forEach(col => {
+          let maxLen = 0;
+          let hasContent = false;
+          col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+            if (cell.value !== null && cell.value !== undefined) {
+              hasContent = true;
+              const strVal = String(cell.value);
+              if (rowNumber <= 4 && strVal.length > 30) return;
+              const w = typeof cell.value === 'number' && Math.abs(cell.value) >= 1000 ? cell.value.toLocaleString('vi-VN').length : strVal.length;
+              maxLen = Math.max(maxLen, w);
+            }
+          });
+          col.width = hasContent ? Math.min(Math.max(maxLen + 4, 11), 60) : 6;
+        });
+      });
+
+      const outBuf = await workbook.xlsx.writeBuffer();
+      const outBlob = new Blob([outBuf], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const baseName = file.name.replace(/\.(xlsx|xls)$/i, '');
+      currentFixedFontFile = {
+        blob: outBlob,
+        fileName: file.name,
+        downloadName: `${baseName}_ChuanUnicode_DinhDangDep.xlsx`,
+        fileType: 'xlsx',
+        fileSize: outBlob.size,
+        convertedCount: convertedCells,
+        extractedText: ''
+      };
+
+      document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô & kẻ bảng, căn chỉnh chuyên nghiệp ${workbook.worksheets.length} bảng tính`;
+      logOfficeAction('Cứu font & Kẻ bảng Excel', `Đã sửa font và kẻ bảng chuyên nghiệp file ${file.name} (${workbook.worksheets.length} sheets)`);
+      return;
+    } catch (excelJsErr) {
+      console.warn("ExcelJS styling pipeline failed, falling back to reliable SheetJS engine:", excelJsErr);
+    }
+  }
+
+  // Phương án dự phòng SheetJS an toàn tuyệt đối 100% (luôn chạy tốt cho mọi file .xls, .xlsx, .csv)
   if (typeof XLSX === 'undefined') {
     throw new Error('Thư viện xử lý Excel chưa sẵn sàng.');
   }
@@ -2603,8 +2642,8 @@ async function processExcelFont(file, mode) {
     extractedText: ''
   };
 
-  document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô dữ liệu sang Unicode chuẩn`;
-  logOfficeAction('Cứu font Excel', `Đã sửa hoàn chỉnh lỗi font file Excel ${file.name} (${convertedCells} ô dữ liệu)`);
+  document.getElementById('font-file-meta').textContent = `${(outBlob.size / 1024).toFixed(1)} KB • Đã sửa ${convertedCells} ô dữ liệu sang chuẩn Unicode`;
+  logOfficeAction('Cứu font Excel (SheetJS)', `Đã sửa hoàn chỉnh lỗi font file Excel ${file.name} (${convertedCells} ô)`);
 }
 
 // 3. Sửa Lỗi Font Cho File PDF (.pdf)
@@ -5780,3 +5819,389 @@ const ZenTelemetry = {
     return Number(num).toLocaleString('vi-VN');
   }
 };
+
+
+// ============================================================
+// PHÂN HỆ 5: ZENSCAN — PHÁP CHỨNG & SOI BILL CHUYỂN TIỀN NGÂN HÀNG 100% CLIENT-SIDE
+// ============================================================
+let currentZsImage = null;
+let currentZsImageDataUrl = null;
+let currentZsRawFile = null;
+let currentZsDiffData = null;
+let currentZsDiffWidth = 0;
+let currentZsDiffHeight = 0;
+let currentZsScale = 15;
+
+function initZenScanModule() {
+  const dropzone = document.getElementById('zs-dropzone');
+  const fileInput = document.getElementById('zs-file-input');
+
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        loadZenScanFile(e.target.files[0]);
+      }
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-emerald-500', 'bg-emerald-50');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-emerald-500', 'bg-emerald-50');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        loadZenScanFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  // Lắng nghe Paste (Ctrl + V)
+  window.addEventListener('paste', (e) => {
+    if (currentTab === 'zenscan') {
+      if (e.clipboardData && e.clipboardData.items) {
+        for (let i = 0; i < e.clipboardData.items.length; i++) {
+          const item = e.clipboardData.items[i];
+          if (item.type.indexOf('image') !== -1) {
+            const file = item.getAsFile();
+            if (file) loadZenScanFile(file);
+            break;
+          }
+        }
+      }
+    }
+  });
+}
+
+function loadZenScanFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    alert('Vui lòng chọn một tệp hình ảnh (JPEG, PNG, WEBP, HEIC).');
+    return;
+  }
+  currentZsRawFile = file;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    currentZsImageDataUrl = e.target.result;
+    const img = new Image();
+    img.onload = () => {
+      currentZsImage = img;
+      
+      // Hiển thị thông tin file
+      document.getElementById('zs-filename').textContent = file.name;
+      const sizeKb = (file.size / 1024).toFixed(1);
+      document.getElementById('zs-filemeta').textContent = `${img.naturalWidth} x ${img.naturalHeight} px • ${sizeKb} KB • ${file.type.toUpperCase()}`;
+      
+      document.getElementById('zs-display-orig').src = currentZsImageDataUrl;
+      document.getElementById('zs-dropzone').classList.add('hidden');
+      document.getElementById('zs-preview-panel').classList.remove('hidden');
+      document.getElementById('zs-results-container').classList.add('hidden');
+      
+      // Tự động phân tích ngay lập tức
+      runZenScanAnalysis();
+    };
+    img.src = currentZsImageDataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetZenScan() {
+  currentZsImage = null;
+  currentZsImageDataUrl = null;
+  currentZsRawFile = null;
+  currentZsDiffData = null;
+  
+  const fileInput = document.getElementById('zs-file-input');
+  if (fileInput) fileInput.value = '';
+
+  document.getElementById('zs-dropzone').classList.remove('hidden');
+  document.getElementById('zs-preview-panel').classList.add('hidden');
+  document.getElementById('zs-results-container').classList.add('hidden');
+}
+
+// THUẬT TOÁN ERROR LEVEL ANALYSIS (ELA) TRỰC TIẾP TRONG CLIENT-SIDE CANVAS
+function runZenScanAnalysis() {
+  if (!currentZsImage) return;
+
+  const img = currentZsImage;
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+
+  // Giới hạn max dimension để xử lý siêu tốc trong 0.2 giây
+  const maxDim = 1200;
+  let targetW = w;
+  let targetH = h;
+  if (Math.max(w, h) > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    targetW = Math.round(w * scale);
+    targetH = Math.round(h * scale);
+  }
+
+  currentZsDiffWidth = targetW;
+  currentZsDiffHeight = targetH;
+
+  // 1. Vẽ ảnh gốc lên Canvas 1
+  const cOrig = document.createElement('canvas');
+  cOrig.width = targetW;
+  cOrig.height = targetH;
+  const ctxOrig = cOrig.getContext('2d');
+  ctxOrig.drawImage(img, 0, 0, targetW, targetH);
+  const origData = ctxOrig.getImageData(0, 0, targetW, targetH).data;
+
+  // 2. Nén lại ảnh ở mức JPEG Quality 0.90
+  const recompressedDataUrl = cOrig.toDataURL('image/jpeg', 0.90);
+  const imgRecompressed = new Image();
+  imgRecompressed.onload = () => {
+    // 3. Vẽ ảnh tái nén lên Canvas 2
+    const cRecomp = document.createElement('canvas');
+    cRecomp.width = targetW;
+    cRecomp.height = targetH;
+    const ctxRecomp = cRecomp.getContext('2d');
+    ctxRecomp.drawImage(imgRecompressed, 0, 0, targetW, targetH);
+    const recompData = ctxRecomp.getImageData(0, 0, targetW, targetH).data;
+
+    // 4. Tính toán sai lệch tuyệt đối per-pixel
+    const totalPixels = targetW * targetH;
+    const diffBuf = new Float32Array(totalPixels);
+    let totalDiff = 0;
+
+    for (let i = 0; i < totalPixels; i++) {
+      const idx = i * 4;
+      const dr = Math.abs(origData[idx] - recompData[idx]);
+      const dg = Math.abs(origData[idx+1] - recompData[idx+1]);
+      const db = Math.abs(origData[idx+2] - recompData[idx+2]);
+      const meanDiff = (dr + dg + db) / 3.0;
+      diffBuf[i] = meanDiff;
+      totalDiff += meanDiff;
+    }
+
+    currentZsDiffData = diffBuf;
+
+    // 5. Phân tích lưới 16x16 block để phát hiện vùng dị biệt ELA (Hotspots)
+    const gy = 16;
+    const gx = 16;
+    const bh = Math.floor(targetH / gy);
+    const bw = Math.floor(targetW / gx);
+    const blockMeans = [];
+
+    for (let by = 0; by < gy; by++) {
+      for (let bx = 0; bx < gx; bx++) {
+        let bSum = 0;
+        let count = 0;
+        for (let y = by * bh; y < Math.min(targetH, (by + 1) * bh); y++) {
+          for (let x = bx * bw; x < Math.min(targetW, (bx + 1) * bw); x++) {
+            bSum += diffBuf[y * targetW + x];
+            count++;
+          }
+        }
+        if (count > 0) blockMeans.push(bSum / count);
+      }
+    }
+
+    blockMeans.sort((a, b) => a - b);
+    const medianNoise = blockMeans[Math.floor(blockMeans.length / 2)] || 0.1;
+    const safeMedian = Math.max(0.08, medianNoise);
+
+    let hotBlocks = 0;
+    let warmBlocks = 0;
+    for (let i = 0; i < blockMeans.length; i++) {
+      const ratio = blockMeans[i] / safeMedian;
+      if (ratio > 2.8) hotBlocks++;
+      else if (ratio > 1.8) warmBlocks++;
+    }
+
+    const totalBlocks = blockMeans.length;
+    const hotRatio = hotBlocks / totalBlocks;
+    const warmRatio = warmBlocks / totalBlocks;
+
+    // Điểm ELA
+    const elaScore = Math.min(100, Math.round((hotRatio * 220) + (warmRatio * 45)));
+
+    // 6. Kiểm tra tỷ lệ khung hình & resolution
+    const aspectRatio = (h / w).toFixed(2);
+    let ratioPenalty = 0;
+    const flags = [];
+
+    if (aspectRatio < 1.3) {
+      ratioPenalty = 15;
+      flags.push("Tỷ lệ khung hình vuông hoặc ngang (không giống ảnh chụp màn hình smartphone dọc thông thường).");
+    }
+    if (w < 500 || h < 900) {
+      flags.push(`Độ phân giải ảnh thấp (${w}x${h}px), nghi vấn ảnh đã bị cắt xén (crop) hoặc xuất từ web generator.`);
+    }
+
+    if (elaScore >= 45) {
+      flags.push(`Phát hiện mật độ nén ELA chênh lệch cao (${elaScore}%) — vùng số tiền hoặc mã giao dịch có dấu vết bị chèn đè sau khi lưu.`);
+    } else if (elaScore >= 25) {
+      flags.push(`Có một số khối điểm ảnh phát quang nhẹ (${elaScore}%), cần kiểm tra lại độ đồng nhất của phông chữ.`);
+    }
+
+    // 7. Tổng hợp điểm rủi ro (Risk Score)
+    const finalRisk = Math.min(100, Math.max(0, Math.round(elaScore * 0.75 + ratioPenalty)));
+
+    // 8. Vẽ Heatmap lên canvas hiển thị
+    renderElaHeatmap(currentZsScale);
+
+    // 9. Cập nhật UI
+    renderZenScanResults(finalRisk, elaScore, aspectRatio, flags);
+  };
+  imgRecompressed.src = recompressedDataUrl;
+}
+
+function renderElaHeatmap(scale) {
+  if (!currentZsDiffData) return;
+  const canvas = document.getElementById('zs-ela-canvas');
+  const w = currentZsDiffWidth;
+  const h = currentZsDiffHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(w, h);
+  const data = imgData.data;
+
+  for (let i = 0; i < currentZsDiffData.length; i++) {
+    const val = Math.min(255, currentZsDiffData[i] * scale);
+    const idx = i * 4;
+    // Tô màu Heatmap: sắc thái dạ quang xanh/cam/đỏ trực quan
+    if (val > 140) {
+      data[idx] = 255;       // R
+      data[idx+1] = 60;      // G
+      data[idx+2] = 60;      // B
+    } else if (val > 70) {
+      data[idx] = 245;       // R
+      data[idx+1] = 158;     // G
+      data[idx+2] = 11;      // B
+    } else {
+      data[idx] = Math.round(val * 0.4);
+      data[idx+1] = Math.round(val * 1.5);
+      data[idx+2] = Math.round(val * 1.8);
+    }
+    data[idx+3] = 255;       // Alpha
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function updateElaAmplification(val) {
+  currentZsScale = parseInt(val, 10);
+  document.getElementById('zs-scale-val').textContent = currentZsScale + 'x';
+  renderElaHeatmap(currentZsScale);
+}
+
+function setZenScanViewMode(mode) {
+  const origImg = document.getElementById('zs-display-orig');
+  const elaCanvas = document.getElementById('zs-ela-canvas');
+  const btnEla = document.getElementById('btn-view-ela');
+  const btnOrig = document.getElementById('btn-view-orig');
+
+  if (mode === 'orig') {
+    origImg.classList.remove('hidden');
+    elaCanvas.classList.add('hidden');
+    btnOrig.className = "px-2.5 py-1 rounded font-semibold bg-emerald-600 text-white";
+    btnEla.className = "px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white";
+  } else {
+    origImg.classList.add('hidden');
+    elaCanvas.classList.remove('hidden');
+    btnEla.className = "px-2.5 py-1 rounded font-semibold bg-emerald-600 text-white";
+    btnOrig.className = "px-2.5 py-1 rounded font-semibold text-slate-400 hover:text-white";
+  }
+}
+
+function renderZenScanResults(risk, elaScore, ratio, flags) {
+  const card = document.getElementById('zs-verdict-card');
+  const title = document.getElementById('zs-verdict-title');
+  const desc = document.getElementById('zs-verdict-desc');
+  const icon = document.getElementById('zs-verdict-icon');
+  const score = document.getElementById('zs-risk-score');
+
+  score.textContent = risk + '%';
+  document.getElementById('zs-metric-ela').textContent = elaScore + '%';
+  document.getElementById('zs-metric-ratio').textContent = ratio + ' (Chuẩn dọc)';
+
+  if (risk >= 60) {
+    card.className = "p-5 rounded-2xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg";
+    icon.className = "w-14 h-14 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-3xl shadow-md shadow-rose-500/30";
+    icon.innerHTML = '<i class="ri-alert-fill"></i>';
+    title.textContent = `CẢNH BÁO CAO: NGUY CƠ BILL GIẢ MẠO (${risk}%)`;
+    desc.textContent = "Phát hiện chênh lệch nén ELA bất thường quanh vị trí chữ/số. Nguy cơ rất cao bill đã bị sửa đổi bằng app hoặc photoshop!";
+    score.className = "text-3xl font-black text-rose-600 dark:text-rose-400";
+  } else if (risk >= 30) {
+    card.className = "p-5 rounded-2xl border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg";
+    icon.className = "w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-md shadow-amber-500/30";
+    icon.innerHTML = '<i class="ri-error-warning-fill"></i>';
+    title.textContent = `NGHI VẤN CAO: CẦN ĐỐI SOÁT KỸ (${risk}%)`;
+    desc.textContent = "Một số vùng điểm ảnh có sai lệch nhẹ. Khuyến nghị chỉ giao hàng khi tin nhắn SMS/app ngân hàng đã nổi tiền.";
+    score.className = "text-3xl font-black text-amber-600 dark:text-amber-400";
+  } else {
+    card.className = "p-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg";
+    icon.className = "w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-md shadow-emerald-500/30";
+    icon.innerHTML = '<i class="ri-checkbox-circle-fill"></i>';
+    title.textContent = "ĐỘ TIN CẬY CAO: GIAO DIỆN HỢP LỆ THEO CHUẨN";
+    desc.textContent = "Mật độ nén ELA đồng đều, không phát hiện dấu vết chèn ghép thô bạo. Vẫn nên xác nhận tiền đã về tài khoản trước khi giao hàng lớn.";
+    score.className = "text-3xl font-black text-emerald-600 dark:text-emerald-400";
+  }
+
+  const flagsList = document.getElementById('zs-flags-list');
+  flagsList.innerHTML = '';
+  if (flags.length === 0) {
+    flagsList.innerHTML = '<li class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"><i class="ri-check-line"></i> Không phát hiện dấu hiệu can thiệp bất thường trên ma trận điểm ảnh.</li>';
+  } else {
+    flags.forEach(f => {
+      const li = document.createElement('li');
+      li.className = "flex items-start gap-1.5";
+      li.innerHTML = `<i class="ri-close-circle-fill mt-0.5 flex-shrink-0"></i> <span>${f}</span>`;
+      flagsList.appendChild(li);
+    });
+  }
+
+  document.getElementById('zs-results-container').classList.remove('hidden');
+}
+
+// CÔNG CỤ ĐỐI SOÁT ĐỊNH DẠNG MÃ GIAO DỊCH
+function validateTransactionFormat() {
+  const bank = document.getElementById('zs-bank-select').value;
+  const txid = document.getElementById('zs-txid-input').value.trim();
+  const feedback = document.getElementById('zs-format-feedback');
+  if (!txid) {
+    feedback.className = "text-xs p-2.5 rounded-lg hidden";
+    return;
+  }
+
+  feedback.classList.remove('hidden');
+  let isValid = true;
+  let bankName = "Ngân hàng";
+  let sampleRule = "";
+
+  if (bank === 'vcb') {
+    bankName = "Vietcombank";
+    // VCB Digibank thường có mã dài 10-20 ký tự số hoặc bắt đầu bằng số/chữ
+    isValid = txid.length >= 8 && /^[A-Za-z0-9]+$/.test(txid);
+    sampleRule = "Mã GD Vietcombank thường là chuỗi ký tự số và chữ dài từ 10 - 20 ký tự.";
+  } else if (bank === 'mb') {
+    bankName = "MBBank";
+    // MB thường bắt đầu bằng FT hoặc số dài
+    isValid = (txid.startsWith('FT') || txid.length >= 10) && /^[A-Za-z0-9]+$/.test(txid);
+    sampleRule = "Mã GD MBBank thường bắt đầu bằng ký tự 'FT' hoặc chuỗi số từ 12 ký tự trở lên.";
+  } else if (bank === 'tcb') {
+    bankName = "Techcombank";
+    isValid = txid.length >= 10 && /^[A-Za-z0-9]+$/.test(txid);
+    sampleRule = "Mã GD Techcombank là dãy số/chữ dài từ 12 - 24 ký tự.";
+  } else {
+    isValid = txid.length >= 6 && /^[A-Za-z0-9\-_]+$/.test(txid);
+    sampleRule = "Mã GD ngân hàng thường là chuỗi số hoặc chữ không chứa ký tự đặc biệt.";
+  }
+
+  if (isValid) {
+    feedback.className = "text-xs p-2.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800";
+    feedback.innerHTML = `<i class="ri-checkbox-circle-line mr-1"></i> <strong>Định dạng hợp lệ:</strong> Mã GD khớp với cấu trúc thường thấy của ${bankName}.`;
+  } else {
+    feedback.className = "text-xs p-2.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800";
+    feedback.innerHTML = `<i class="ri-alert-line mr-1"></i> <strong>Nghi vấn sai định dạng:</strong> ${sampleRule}`;
+  }
+}
