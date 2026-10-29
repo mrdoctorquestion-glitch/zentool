@@ -5775,12 +5775,21 @@ const ZenTelemetry = {
 
     if (this.apiUrl) {
       try {
-        fetch(`${this.apiUrl}/api/telemetry/download`, {
+        let genericType = 'file';
+        if (typeof fileName === 'string') {
+          const lower = fileName.toLowerCase();
+          if (lower.indexOf('.xls') !== -1 || lower.indexOf('.csv') !== -1) genericType = 'excel';
+          else if (lower.indexOf('.pdf') !== -1) genericType = 'pdf';
+          else if (lower.indexOf('.png') !== -1 || lower.indexOf('.jpg') !== -1 || lower.indexOf('.webp') !== -1) genericType = 'image';
+          else if (lower.indexOf('.docx') !== -1) genericType = 'contract';
+          else genericType = 'utility';
+        }
+        fetch(${this.apiUrl}/api/telemetry/download, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId: this.sessionId,
-            toolName: fileName || 'file'
+            toolName: genericType
           })
         }).then(r => r.json()).then(data => {
           if (data && data.downloads) {
