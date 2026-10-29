@@ -156,7 +156,7 @@
     var dw = ow - iw;
     var dh = oh - ih;
 
-    if (ow > 0 && iw > 0 && (dw > 175 || dh > 175)) {
+    if (ow > 0 && iw > 0 && (dw > 220 || dh > 260)) {
       triggerDefenseBreach('DevTools Docked Panel Detected');
     }
   }
